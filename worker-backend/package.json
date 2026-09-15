@@ -1,0 +1,10 @@
+{
+  "name": "ac-smart-service",
+  "version": "2.0.0",
+  "description": "AC Smart Service Dashboard — Cloudflare Workers + D1 + Evolution API + AI WhatsApp Service Assistant",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  }
+}

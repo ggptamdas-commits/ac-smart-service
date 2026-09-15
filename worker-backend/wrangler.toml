@@ -1,0 +1,17 @@
+name = "ac-smart-service"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+BUSINESS_TIMEZONE = "Asia/Riyadh"
+DASHBOARD_ORIGIN = "https://ac-smart-service.virallink.workers.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ac-smart-service-db"
+database_id = "c7372695-f585-4f7c-b6be-6a7b7cc3ac16"
+
+[triggers]
+crons = ["0 9 * * *"]
