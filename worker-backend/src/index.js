@@ -34,6 +34,12 @@ function normalizePhone(rawPhone) {
   return clean;
 }
 
+function riyadhDate() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
 async function getDashboardHTML(env) {
   const now = Date.now();
   if (cachedHtml && (now - lastFetchTime < 60000)) {
@@ -128,11 +134,11 @@ function getCorsHeaders(request) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret, apikey, x-api-key',
     'Access-Control-Max-Age': '86400'
   };
-  if (origin) {
+  const allowedOrigins = String(request.cf?.dashboardOrigins || 'https://ac-smart-service.virallink.workers.dev')
+    .split(',').map(v => v.trim()).filter(Boolean);
+  if (origin && allowedOrigins.includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
     headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
   }
   return headers;
 }
@@ -184,6 +190,18 @@ async function getAuthUser(request, env) {
 function checkRole(authUser, allowedRoles) {
   if (!authUser || !authUser.role) return false;
   return allowedRoles.includes(authUser.role);
+}
+
+function isAllowedStatusTransition(from, to) {
+  if (!to || from === to) return true;
+  const transitions = {
+    pending: ['scheduled', 'cancelled'],
+    scheduled: ['in_progress', 'cancelled'],
+    in_progress: ['completed'],
+    completed: [],
+    cancelled: []
+  };
+  return Boolean(transitions[from] && transitions[from].includes(to));
 }
 
 async function logAudit(env, adminId, action, tableName, recordId, changes, ip = '') {
@@ -450,17 +468,17 @@ RULES:
     };
   }
 
-  const hasAddressKeywords = lower.includes('রোড') || lower.includes('বাসা') || lower.includes('গ্রাম') || lower.includes('জেলা') || lower.includes('شارع') || lower.includes('حي') || lower.includes('صبيا') || lower.includes('جازান') || lower.includes('street') || lower.includes('district');
-  const isAddressGiven = customer.address || (hasAddressKeywords && incomingText.trim().length > 10);
+  // Keywords alone are not address extraction. Never persist the entire message as an address.
+  const isAddressGiven = Boolean(customer.address);
   const isIssueGiven = lower.includes('ঠান্ডা') || lower.includes('পানি') || lower.includes('শব্দ') || lower.includes('গ্যাস') || lower.includes('কুলিং') || lower.includes('লিক') || lower.includes('ac') || lower.includes('এসি') || lower.includes('সার্ভিস') || lower.includes('تكييف') || lower.includes('تبريد') || lower.includes('غসিল');
 
   if (isIssueGiven && isAddressGiven) {
-    const serviceAddress = customer.address || (hasAddressKeywords ? incomingText.trim() : 'ঠিকানা যাচাইকরণ প্রয়োজন');
+    const serviceAddress = customer.address;
     return {
       reply: 'ধন্যবাদ! আপনার সমস্যা ও ঠিকানার তথ্য পেয়েছি। সার্ভিস রিকোয়েস্ট তৈরি করা হচ্ছে। আমাদের প্রতিনিধি শীঘ্রই সময় চূড়ান্ত করতে যোগাযোগ করবেন।',
       intent: 'service_request',
       state: 'ready_to_create',
-      customer_update: (!customer.address && hasAddressKeywords) ? { address: serviceAddress } : {},
+      customer_update: {},
       tool_call: {
         name: 'create_service_request',
         arguments: {
@@ -494,9 +512,10 @@ RULES:
 
 async function processDueReminders(env, initiatedBy = 'cron') {
   console.log(`[Reminders] Processing due reminders initiated by: ${initiatedBy}`);
+  const businessDate = riyadhDate();
   const dueCustomers = await env.DB.prepare(
-    'SELECT * FROM customers WHERE next_reminder_date <= date("now") AND bot_enabled = 1'
-  ).all();
+    'SELECT * FROM customers WHERE next_reminder_date <= ? AND bot_enabled = 1'
+  ).bind(businessDate).all();
 
   const setting = await env.DB.prepare('SELECT * FROM reminder_settings WHERE active = 1 LIMIT 1').first();
   let processedCount = 0;
@@ -506,11 +525,15 @@ async function processDueReminders(env, initiatedBy = 'cron') {
   if (setting && dueCustomers.results && dueCustomers.results.length > 0) {
     const intervalDays = parseInt(setting.interval_days) || 90;
     for (const cust of dueCustomers.results) {
-      const alreadySent = await env.DB.prepare(
-        'SELECT id FROM reminder_logs WHERE customer_id = ? AND scheduled_date = date("now") AND status = "sent"'
-      ).bind(cust.id).first();
-
-      if (alreadySent) continue;
+      const claim = await env.DB.prepare(
+        'INSERT OR IGNORE INTO reminder_logs (customer_id, reminder_setting_id, scheduled_date, status) VALUES (?, ?, ?, "pending")'
+      ).bind(cust.id, setting.id, businessDate).run();
+      if (!claim.meta.changes) {
+        const retry = await env.DB.prepare(
+          'UPDATE reminder_logs SET status = "pending", error_message = NULL WHERE customer_id = ? AND reminder_setting_id = ? AND scheduled_date = ? AND status = "failed"'
+        ).bind(cust.id, setting.id, businessDate).run();
+        if (!retry.meta.changes) continue;
+      }
 
       processedCount++;
       const msg = setting.message_template
@@ -521,12 +544,12 @@ async function processDueReminders(env, initiatedBy = 'cron') {
       const isSuccess = Boolean(sendRes && sendRes.success);
 
       await env.DB.prepare(
-        'INSERT INTO reminder_logs (customer_id, reminder_setting_id, scheduled_date, sent_at, status, error_message) VALUES (?, ?, date("now"), CURRENT_TIMESTAMP, ?, ?)'
-      ).bind(cust.id, setting.id, isSuccess ? 'sent' : 'failed', isSuccess ? null : (sendRes.error || 'WhatsApp delivery failed')).run();
+        'UPDATE reminder_logs SET sent_at = CASE WHEN ? = "sent" THEN CURRENT_TIMESTAMP ELSE NULL END, status = ?, error_message = ? WHERE customer_id = ? AND reminder_setting_id = ? AND scheduled_date = ?'
+      ).bind(isSuccess ? 'sent' : 'failed', isSuccess ? 'sent' : 'failed', isSuccess ? null : (sendRes.error || 'WhatsApp delivery failed'), cust.id, setting.id, businessDate).run();
 
       if (isSuccess) {
         successCount++;
-        const nextDate = new Date();
+        const nextDate = new Date(`${businessDate}T00:00:00+03:00`);
         nextDate.setDate(nextDate.getDate() + intervalDays);
         const nextDateStr = nextDate.toISOString().split('T')[0];
         await env.DB.prepare(
@@ -557,10 +580,10 @@ export default {
 
       if (path === '/api/health') {
         try {
-          const dbRes = await env.DB.prepare('SELECT count(*) as cnt FROM admin_users').first();
-          return jsonResponse(request, { status: 'ok', db_connected: true, admin_count: dbRes.cnt });
+          await env.DB.prepare('SELECT 1').first();
+          return jsonResponse(request, { status: 'ok', db_connected: true });
         } catch (err) {
-          return jsonResponse(request, { status: 'error', db_connected: false, error: err.message }, 500);
+          return jsonResponse(request, { status: 'error', db_connected: false }, 500);
         }
       }
 
@@ -623,16 +646,13 @@ export default {
             return errorResponse(request, 'Missing valid phone or whatsapp message id', 'INVALID_PAYLOAD');
           }
 
-          const existing = await env.DB.prepare('SELECT id FROM messages WHERE whatsapp_message_id = ?').bind(whatsappMessageId).first();
-          if (existing) {
-            return successResponse(request, { status: 'already_processed', message_id: existing.id });
+          const webhookInsert = await env.DB.prepare(
+            'INSERT OR IGNORE INTO webhook_logs (event_id, event_type, phone, payload_summary, status) VALUES (?, ?, ?, ?, ?)'
+          ).bind(whatsappMessageId, 'incoming_message', phone, text.slice(0, 200), 'received').run();
+          if (!webhookInsert.meta.changes) {
+            const existing = await env.DB.prepare('SELECT id FROM messages WHERE whatsapp_message_id = ?').bind(whatsappMessageId).first();
+            return successResponse(request, { status: 'already_processed', message_id: existing?.id || null });
           }
-
-          try {
-            await env.DB.prepare(
-              'INSERT OR IGNORE INTO webhook_logs (event_id, event_type, phone, payload_summary, status) VALUES (?, ?, ?, ?, ?)'
-            ).bind(whatsappMessageId, 'incoming_message', phone, text.slice(0, 200), 'received').run();
-          } catch (e) {}
 
           let customer = await env.DB.prepare('SELECT * FROM customers WHERE phone = ?').bind(phone).first();
           if (!customer) {
@@ -689,22 +709,25 @@ export default {
 
                 if (!existingPending) {
                   const reqRes = await env.DB.prepare(
-                    `INSERT INTO service_requests (customer_id, conversation_id, issue_description, address, preferred_date, preferred_time, status)
-                     VALUES (?, ?, ?, ?, ?, ?, 'pending')`
+                    `INSERT OR IGNORE INTO service_requests (customer_id, conversation_id, source_message_id, issue_description, address, preferred_date, preferred_time, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
                   ).bind(
                     customer.id,
                     conversation.id,
+                    whatsappMessageId,
                     validated.issue_description,
                     validated.address,
                     validated.preferred_date,
                     validated.preferred_time
                   ).run();
 
-                  if (validated.address && (!customer.address || customer.address === 'অজানা ঠিকানা')) {
+                  if (reqRes.meta.changes && validated.address && (!customer.address || customer.address === 'অজানা ঠিকানা')) {
                     await env.DB.prepare('UPDATE customers SET address = ? WHERE id = ?').bind(validated.address, customer.id).run();
                   }
 
-                  await logAudit(env, null, 'AI_CREATE_REQUEST', 'service_requests', reqRes.meta.last_row_id, validated);
+                  if (reqRes.meta.changes) {
+                    await logAudit(env, null, 'AI_CREATE_REQUEST', 'service_requests', reqRes.meta.last_row_id, validated);
+                  }
                 }
               }
             } else if (tool.name === 'handover_to_human') {
@@ -737,7 +760,7 @@ export default {
           });
         } catch (err) {
           console.error('Webhook processing error:', err);
-          return errorResponse(request, err.message, 'INTERNAL_SERVER_ERROR', 500);
+          return errorResponse(request, 'Unable to process the webhook', 'INTERNAL_SERVER_ERROR', 500);
         }
       }
 
@@ -758,7 +781,7 @@ export default {
         }
 
         const user = await env.DB.prepare('SELECT * FROM admin_users WHERE email = ?').bind(normEmail).first();
-        if (!user) {
+        if (!user || !user.active) {
           await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 0)').bind(clientIp, normEmail).run();
           return errorResponse(request, 'Invalid credentials', 'AUTH_FAILED', 401);
         }
@@ -784,7 +807,7 @@ export default {
         const cookie = `ac_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
         return successResponse(
           request,
-          { token: sessionId, user: { id: user.id, email: user.email, name: user.name, role: user.role } },
+          { user: { id: user.id, email: user.email, name: user.name, role: user.role } },
           200,
           { 'Set-Cookie': cookie }
         );
@@ -814,16 +837,19 @@ export default {
         if (method === 'GET') {
           const rows = await env.DB.prepare('SELECT key, value FROM business_settings').all();
           const settings = {};
+          const allowedKeys = ['EVOLUTION_API_URL', 'EVOLUTION_INSTANCE', 'AI_PROVIDER', 'AI_MODEL', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+          const secretKeys = ['EVOLUTION_API_KEY', 'WEBHOOK_SECRET', 'AI_API_KEY'];
           if (rows.results) {
-            rows.results.forEach(r => { settings[r.key] = r.value; });
+            rows.results.forEach(r => {
+              if (allowedKeys.includes(r.key)) settings[r.key] = r.value;
+              if (secretKeys.includes(r.key)) settings[r.key] = '••••••••';
+            });
           }
-          const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+          const keys = [...allowedKeys, ...secretKeys];
           keys.forEach(k => {
             if (!settings[k] && env[k]) settings[k] = env[k];
           });
-          ['EVOLUTION_API_KEY', 'WEBHOOK_SECRET', 'AI_API_KEY'].forEach(k => {
-            if (settings[k]) settings[k] = '••••••••';
-          });
+          secretKeys.forEach(k => { if (settings[k]) settings[k] = '••••••••'; });
           return successResponse(request, settings);
         }
         if (method === 'POST') {
@@ -858,7 +884,7 @@ export default {
           const resData = await resp.json();
           return successResponse(request, { connected: resp.ok, data: resData });
         } catch (err) {
-          return errorResponse(request, err.message, 'CONNECTION_FAILED', 500);
+          return errorResponse(request, 'Integration connection failed', 'CONNECTION_FAILED', 502);
         }
       }
 
@@ -904,7 +930,7 @@ export default {
             return successResponse(request, { reply: 'বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন সক্রিয় ও প্রস্তুত আছে!' });
           }
         } catch (err) {
-          return errorResponse(request, err.message, 'AI_TEST_FAILED', 500);
+          return errorResponse(request, 'AI integration test failed', 'AI_TEST_FAILED', 502);
         }
       }
 
@@ -913,8 +939,9 @@ export default {
         const activeChatsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM conversations WHERE status = "active"').first();
         const pendingReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "pending"').first();
         const scheduledReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "scheduled"').first();
-        const completedTodayCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "completed" AND date(updated_at) = date("now")').first();
-        const remindersDueCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers WHERE next_reminder_date <= date("now") AND bot_enabled = 1').first();
+        const businessDate = riyadhDate();
+        const completedTodayCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "completed" AND date(updated_at) = ?').bind(businessDate).first();
+        const remindersDueCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers WHERE next_reminder_date <= ? AND bot_enabled = 1').bind(businessDate).first();
 
         return successResponse(request, {
           total_customers: customersCnt ? customersCnt.cnt : 0,
@@ -1004,10 +1031,11 @@ export default {
 
           const sendRes = await sendWhatsAppMessage(env, customer.phone, text);
           await env.DB.prepare(
-            'INSERT INTO messages (customer_id, sender, text, message_type, delivery_status, sent_by_admin) VALUES (?, "agent", ?, "text", ?, 1)'
-          ).bind(custId, text, sendRes.success ? 'sent' : 'failed').run();
+            'INSERT INTO messages (customer_id, sender, text, message_type, delivery_status) VALUES (?, "admin", ?, "text", ?)'
+          ).bind(custId, text.slice(0, 4000), sendRes.success ? 'sent' : 'failed').run();
           await logAudit(env, authUser.user_id, 'SEND_MANUAL_WHATSAPP', 'messages', null, { to: customer.phone, text });
-          return successResponse(request, { sent: true, provider_result: sendRes });
+          if (!sendRes.success) return errorResponse(request, 'WhatsApp delivery failed', 'DELIVERY_FAILED', 502);
+          return successResponse(request, { sent: true });
         }
 
         if (method === 'GET') {
@@ -1054,6 +1082,11 @@ export default {
             return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
           }
           const body = await request.json();
+          if (!body.customer_id || !body.issue_description?.trim() || !body.address?.trim()) {
+            return errorResponse(request, 'Customer, issue, and address are required', 'VALIDATION_ERROR');
+          }
+          const customer = await env.DB.prepare('SELECT id FROM customers WHERE id = ?').bind(body.customer_id).first();
+          if (!customer) return errorResponse(request, 'Customer not found', 'NOT_FOUND', 404);
           const ins = await env.DB.prepare(
             `INSERT INTO service_requests (customer_id, issue_description, address, preferred_date, preferred_time, status, notes)
              VALUES (?, ?, ?, ?, ?, 'pending', ?)`
@@ -1081,6 +1114,17 @@ export default {
             return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
           }
           const body = await request.json();
+          const current = await env.DB.prepare('SELECT * FROM service_requests WHERE id = ?').bind(id).first();
+          if (!current) return errorResponse(request, 'Service request not found', 'NOT_FOUND', 404);
+          if (!isAllowedStatusTransition(current.status, body.status)) {
+            return errorResponse(request, `Invalid status transition: ${current.status} -> ${body.status}`, 'INVALID_STATUS_TRANSITION');
+          }
+          if (body.issue_description !== undefined && !String(body.issue_description).trim()) {
+            return errorResponse(request, 'Issue description cannot be empty', 'VALIDATION_ERROR');
+          }
+          if (body.address !== undefined && !String(body.address).trim()) {
+            return errorResponse(request, 'Address cannot be empty', 'VALIDATION_ERROR');
+          }
           await env.DB.prepare(
             `UPDATE service_requests SET
                issue_description = coalesce(?, issue_description),
@@ -1112,10 +1156,10 @@ export default {
           if (body.status === 'completed') {
             const reqRow = await env.DB.prepare('SELECT customer_id FROM service_requests WHERE id = ?').bind(id).first();
             if (reqRow) {
-              const today = new Date().toISOString().split('T')[0];
+              const today = riyadhDate();
               const remSetting = await env.DB.prepare('SELECT interval_days FROM reminder_settings WHERE active = 1 LIMIT 1').first();
               const interval = remSetting ? parseInt(remSetting.interval_days) || 90 : 90;
-              const nextDate = new Date();
+              const nextDate = new Date(`${today}T00:00:00+03:00`);
               nextDate.setDate(nextDate.getDate() + interval);
               const nextDateStr = nextDate.toISOString().split('T')[0];
               await env.DB.prepare(
