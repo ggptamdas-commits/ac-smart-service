@@ -452,7 +452,7 @@ RULES:
 
   const hasAddressKeywords = lower.includes('রোড') || lower.includes('বাসা') || lower.includes('গ্রাম') || lower.includes('জেলা') || lower.includes('شارع') || lower.includes('حي') || lower.includes('صبيا') || lower.includes('جازান') || lower.includes('street') || lower.includes('district');
   const isAddressGiven = customer.address || (hasAddressKeywords && incomingText.trim().length > 10);
-  const isIssueGiven = lower.includes('ঠান্ডা') || lower.includes('পানি') || lower.includes('শব্দ') || lower.includes('গ্যাস') || lower.includes('কুলিং') || lower.includes('লিক') || lower.includes('ac') || lower.includes('এসি') || lower.includes('সার্ভিস') || lower.includes('تكييف') || lower.includes('تبريد') || lower.includes('غسيل');
+  const isIssueGiven = lower.includes('ঠান্ডা') || lower.includes('পানি') || lower.includes('শব্দ') || lower.includes('গ্যাস') || lower.includes('কুলিং') || lower.includes('লিক') || lower.includes('ac') || lower.includes('এসি') || lower.includes('সার্ভিস') || lower.includes('تكييف') || lower.includes('تبريد') || lower.includes('غসিল');
 
   if (isIssueGiven && isAddressGiven) {
     const serviceAddress = customer.address || (hasAddressKeywords ? incomingText.trim() : 'ঠিকানা যাচাইকরণ প্রয়োজন');
@@ -976,7 +976,7 @@ export default {
           return successResponse(request, { human_takeover: true });
         }
 
-        if (subAction === 'release' && method === 'POST') {
+        if ((subAction === 'resume-ai' || subAction === 'release') && method === 'POST') {
           if (!checkRole(authUser, ['admin', 'manager'])) {
             return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
           }
@@ -993,7 +993,7 @@ export default {
           return successResponse(request, msgs.results || []);
         }
 
-        if (subAction === 'send' && method === 'POST') {
+        if ((subAction === 'messages' || subAction === 'send') && method === 'POST') {
           if (!checkRole(authUser, ['admin', 'manager'])) {
             return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
           }
@@ -1129,7 +1129,7 @@ export default {
         }
       }
 
-      if (path === '/api/reminders/settings') {
+      if (path === '/api/reminders/settings' || path.startsWith('/api/reminders/settings/')) {
         if (method === 'GET') {
           const setting = await env.DB.prepare('SELECT * FROM reminder_settings WHERE active = 1 LIMIT 1').first();
           return successResponse(request, setting || {});
@@ -1164,13 +1164,13 @@ export default {
         return successResponse(request, logs.results || []);
       }
 
-      if (path === '/api/reminders/trigger-now' && method === 'POST') {
+      if ((path === '/api/reminders/trigger' || path === '/api/reminders/trigger-now') && method === 'POST') {
         if (!checkRole(authUser, ['admin', 'manager'])) {
           return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
         }
         const stats = await processDueReminders(env, `manual_by_${authUser.email}`);
         await logAudit(env, authUser.user_id, 'TRIGGER_REMINDERS_MANUAL', 'reminder_logs', null, stats);
-        return successResponse(request, { message: 'Reminders triggered successfully', stats });
+        return successResponse(request, { message: 'Reminders triggered successfully', stats, successful: stats.successful, failed: stats.failed, processed: stats.processed });
       }
 
       if (path === '/api/bot-config') {
