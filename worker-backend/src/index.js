@@ -543,504 +543,473 @@ async function processDueReminders(env, initiatedBy = 'cron') {
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname;
-    const method = request.method;
+    try {
+      const url = new URL(request.url);
+      const path = url.pathname;
+      const method = request.method;
 
-    if (method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: getCorsHeaders(request)
-      });
-    }
-
-    if (path === '/api/health') {
-      try {
-        const dbRes = await env.DB.prepare('SELECT count(*) as cnt FROM admin_users').first();
-        return jsonResponse(request, { status: 'ok', db_connected: true, admin_count: dbRes.cnt });
-      } catch (err) {
-        return jsonResponse(request, { status: 'error', db_connected: false, error: err.message }, 500);
-      }
-    }
-
-    if (path === '/' || path === '/dashboard') {
-      const html = await getDashboardHTML(env);
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' }
-      });
-    }
-
-    if (path === '/webhook/messages') {
-      if (method !== 'POST') return errorResponse(request, 'Method not allowed', 'METHOD_NOT_ALLOWED', 405);
-
-      const configuredSecret = await getRuntimeSetting(env, 'WEBHOOK_SECRET');
-      if (!configuredSecret || configuredSecret.trim().length === 0) {
-        return errorResponse(request, 'Webhook secret not configured on server', 'UNCONFIGURED_WEBHOOK_SECRET', 503);
+      if (method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: getCorsHeaders(request)
+        });
       }
 
-      const headerSecret = request.headers.get('X-Webhook-Secret') ||
-                           request.headers.get('apikey') ||
-                           request.headers.get('x-api-key') ||
-                           request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') ||
-                           url.searchParams.get('secret');
-
-      if (!headerSecret || !timingSafeEqual(headerSecret.trim(), configuredSecret.trim())) {
-        return errorResponse(request, 'Unauthorized webhook secret', 'UNAUTHORIZED_WEBHOOK', 401);
+      if (path === '/api/health') {
+        try {
+          const dbRes = await env.DB.prepare('SELECT count(*) as cnt FROM admin_users').first();
+          return jsonResponse(request, { status: 'ok', db_connected: true, admin_count: dbRes.cnt });
+        } catch (err) {
+          return jsonResponse(request, { status: 'error', db_connected: false, error: err.message }, 500);
+        }
       }
 
-      try {
-        const payload = await request.json();
-        let isFromMe = false;
-        let whatsappMessageId = null;
-        let rawPhone = null;
-        let pushName = null;
-        let text = '';
+      if (path === '/' || path === '/dashboard') {
+        const html = await getDashboardHTML(env);
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      }
 
-        if (payload.data) {
-          const mData = payload.data;
-          isFromMe = mData.key?.fromMe || false;
-          whatsappMessageId = mData.key?.id;
-          rawPhone = mData.key?.remoteJid ? mData.key.remoteJid.split('@')[0] : null;
-          pushName = mData.pushName || null;
-          text = mData.message?.conversation ||
-                 mData.message?.extendedTextMessage?.text ||
-                 mData.message?.imageMessage?.caption || '';
-        } else if (payload.message) {
-          isFromMe = payload.fromMe || false;
-          whatsappMessageId = payload.id;
-          rawPhone = payload.phone || (payload.sender ? payload.sender.split('@')[0] : null);
-          pushName = payload.pushName || null;
-          text = typeof payload.message === 'string' ? payload.message : payload.message.text || '';
+      if (path === '/webhook/messages') {
+        if (method !== 'POST') return errorResponse(request, 'Method not allowed', 'METHOD_NOT_ALLOWED', 405);
+
+        const configuredSecret = await getRuntimeSetting(env, 'WEBHOOK_SECRET');
+        if (!configuredSecret || configuredSecret.trim().length === 0) {
+          return errorResponse(request, 'Webhook secret not configured on server', 'UNCONFIGURED_WEBHOOK_SECRET', 503);
         }
 
-        if (isFromMe) {
-          return successResponse(request, { status: 'ignored_from_me' });
-        }
+        const headerSecret = request.headers.get('X-Webhook-Secret') ||
+                             request.headers.get('apikey') ||
+                             request.headers.get('x-api-key') ||
+                             request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') ||
+                             url.searchParams.get('secret');
 
-        const phone = normalizePhone(rawPhone);
-        if (!phone || !whatsappMessageId) {
-          return errorResponse(request, 'Missing valid phone or whatsapp message id', 'INVALID_PAYLOAD');
-        }
-
-        const existing = await env.DB.prepare('SELECT id FROM messages WHERE whatsapp_message_id = ?').bind(whatsappMessageId).first();
-        if (existing) {
-          return successResponse(request, { status: 'already_processed', message_id: existing.id });
+        if (!headerSecret || !timingSafeEqual(headerSecret.trim(), configuredSecret.trim())) {
+          return errorResponse(request, 'Unauthorized webhook secret', 'UNAUTHORIZED_WEBHOOK', 401);
         }
 
         try {
+          const payload = await request.json();
+          let isFromMe = false;
+          let whatsappMessageId = null;
+          let rawPhone = null;
+          let pushName = null;
+          let text = '';
+
+          if (payload.data) {
+            const mData = payload.data;
+            isFromMe = mData.key?.fromMe || false;
+            whatsappMessageId = mData.key?.id;
+            rawPhone = mData.key?.remoteJid ? mData.key.remoteJid.split('@')[0] : null;
+            pushName = mData.pushName || null;
+            text = mData.message?.conversation ||
+                   mData.message?.extendedTextMessage?.text ||
+                   mData.message?.imageMessage?.caption || '';
+          } else if (payload.message) {
+            isFromMe = payload.fromMe || false;
+            whatsappMessageId = payload.id;
+            rawPhone = payload.phone || (payload.sender ? payload.sender.split('@')[0] : null);
+            pushName = payload.pushName || null;
+            text = typeof payload.message === 'string' ? payload.message : payload.message.text || '';
+          }
+
+          if (isFromMe) {
+            return successResponse(request, { status: 'ignored_from_me' });
+          }
+
+          const phone = normalizePhone(rawPhone);
+          if (!phone || !whatsappMessageId) {
+            return errorResponse(request, 'Missing valid phone or whatsapp message id', 'INVALID_PAYLOAD');
+          }
+
+          const existing = await env.DB.prepare('SELECT id FROM messages WHERE whatsapp_message_id = ?').bind(whatsappMessageId).first();
+          if (existing) {
+            return successResponse(request, { status: 'already_processed', message_id: existing.id });
+          }
+
+          try {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO webhook_logs (event_id, event_type, phone, payload_summary, status) VALUES (?, ?, ?, ?, ?)'
+            ).bind(whatsappMessageId, 'incoming_message', phone, text.slice(0, 200), 'received').run();
+          } catch (e) {}
+
+          let customer = await env.DB.prepare('SELECT * FROM customers WHERE phone = ?').bind(phone).first();
+          if (!customer) {
+            const insertRes = await env.DB.prepare(
+              'INSERT INTO customers (name, phone, status, bot_enabled, created_at, updated_at) VALUES (?, ?, "new", 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+            ).bind(pushName || 'WhatsApp Customer', phone).run();
+            customer = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(insertRes.meta.last_row_id).first();
+          } else if (pushName && (!customer.name || customer.name === 'WhatsApp Customer')) {
+            await env.DB.prepare('UPDATE customers SET name = ? WHERE id = ?').bind(pushName, customer.id).run();
+          }
+
+          let conversation = await env.DB.prepare('SELECT * FROM conversations WHERE customer_id = ?').bind(customer.id).first();
+          if (!conversation) {
+            const convRes = await env.DB.prepare('INSERT INTO conversations (customer_id, status) VALUES (?, "active")').bind(customer.id).run();
+            conversation = { id: convRes.meta.last_row_id, customer_id: customer.id, status: 'active' };
+          }
+
           await env.DB.prepare(
-            'INSERT OR IGNORE INTO webhook_logs (event_id, event_type, phone, payload_summary, status) VALUES (?, ?, ?, ?, ?)'
-          ).bind(whatsappMessageId, 'incoming_message', phone, text.slice(0, 200), 'received').run();
-        } catch (e) {}
+            'INSERT INTO messages (customer_id, conversation_id, whatsapp_message_id, sender, text, message_type, delivery_status) VALUES (?, ?, ?, "customer", ?, "text", "delivered")'
+          ).bind(customer.id, conversation.id, whatsappMessageId, text).run();
 
-        let customer = await env.DB.prepare('SELECT * FROM customers WHERE phone = ?').bind(phone).first();
-        if (!customer) {
-          const insertRes = await env.DB.prepare(
-            'INSERT INTO customers (name, phone, status, bot_enabled, human_takeover) VALUES (?, ?, "new", 1, 0)'
-          ).bind(pushName || 'WhatsApp Customer', phone).run();
-          customer = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(insertRes.meta.last_row_id).first();
-        } else if (pushName && (!customer.name || customer.name === 'WhatsApp Customer')) {
-          await env.DB.prepare('UPDATE customers SET name = ? WHERE id = ?').bind(pushName, customer.id).run();
-          customer.name = pushName;
-        }
+          await env.DB.prepare('UPDATE conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?').bind(conversation.id).run();
 
-        let conversation = await env.DB.prepare(
-          'SELECT * FROM conversations WHERE customer_id = ? AND status = "active"'
-        ).bind(customer.id).first();
-
-        if (!conversation) {
-          const convRes = await env.DB.prepare(
-            'INSERT INTO conversations (customer_id, status) VALUES (?, "active")'
-          ).bind(customer.id).run();
-          conversation = { id: convRes.meta.last_row_id };
-        }
-
-        await env.DB.prepare(
-          'INSERT INTO messages (customer_id, conversation_id, whatsapp_message_id, sender, text, message_type, delivery_status) VALUES (?, ?, ?, "customer", ?, "text", "received")'
-        ).bind(customer.id, conversation.id, whatsappMessageId, text).run();
-
-        await env.DB.prepare('UPDATE conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?').bind(conversation.id).run();
-
-        if (customer.human_takeover === 1 || customer.bot_enabled === 0) {
-          return successResponse(request, { status: 'saved_human_takeover_active' });
-        }
-
-        const recentMessagesResult = await env.DB.prepare(
-          'SELECT sender, text, timestamp FROM messages WHERE customer_id = ? ORDER BY id DESC LIMIT 10'
-        ).bind(customer.id).all();
-        const recentMessages = (recentMessagesResult.results || []).reverse();
-
-        // WhatsApp messaging flood & DoS rate limiter (max 5 msgs per 60s)
-        const recentFlood = await env.DB.prepare(
-          'SELECT count(*) as msg_cnt FROM messages WHERE customer_id = ? AND sender = "customer" AND timestamp > datetime("now", "-60 seconds")'
-        ).bind(customer.id).first();
-        if (recentFlood && recentFlood.msg_cnt > 5) {
-          if (recentFlood.msg_cnt === 6) {
-            await sendWhatsAppMessage(env, phone, 'আপনি খুব দ্রুত অনেকগুলো বার্তা পাঠিয়েছেন। অনুগ্রহ করে ১ মিনিট অপেক্ষা করুন।');
+          if (customer.human_takeover === 1 || customer.bot_enabled === 0) {
+            return successResponse(request, { status: 'saved_human_takeover_active' });
           }
-          return successResponse(request, { status: 'rate_limited_cooldown' });
-        }
 
-        const aiOutput = await processWithAI(env, customer, text, recentMessages);
+          const recentMessagesResult = await env.DB.prepare(
+            'SELECT * FROM messages WHERE customer_id = ? ORDER BY id DESC LIMIT 10'
+          ).bind(customer.id).all();
+          const recentMessages = (recentMessagesResult.results || []).reverse();
 
-        if (aiOutput.tool_call) {
-          const tool = aiOutput.tool_call;
-          if (tool.name === 'create_service_request') {
-            const validated = validateServiceRequest(tool.arguments, customer, text);
-            if (validated) {
-              const existingPending = await env.DB.prepare(
-                'SELECT id FROM service_requests WHERE customer_id = ? AND status = "pending" AND created_at > datetime("now", "-24 hours")'
-              ).bind(customer.id).first();
-
-              if (!existingPending) {
-                const reqRes = await env.DB.prepare(
-                  `INSERT INTO service_requests (customer_id, conversation_id, issue_description, address, preferred_date, preferred_time, status)
-                   VALUES (?, ?, ?, ?, ?, ?, 'pending')`
-                ).bind(
-                  customer.id,
-                  conversation.id,
-                  validated.issue_description,
-                  validated.address,
-                  validated.preferred_date,
-                  validated.preferred_time
-                ).run();
-
-                if (validated.address && (!customer.address || customer.address === 'অজানা ঠিকানা')) {
-                  await env.DB.prepare('UPDATE customers SET address = ? WHERE id = ?').bind(validated.address, customer.id).run();
-                }
-
-                await logAudit(env, null, 'AI_CREATE_REQUEST', 'service_requests', reqRes.meta.last_row_id, validated);
-              }
+          // WhatsApp messaging flood & DoS rate limiter (max 5 msgs per 60s)
+          const recentFlood = await env.DB.prepare(
+            'SELECT count(*) as msg_cnt FROM messages WHERE customer_id = ? AND sender = "customer" AND timestamp > datetime("now", "-60 seconds")'
+          ).bind(customer.id).first();
+          if (recentFlood && recentFlood.msg_cnt > 5) {
+            if (recentFlood.msg_cnt === 6) {
+              await sendWhatsAppMessage(env, phone, 'আপনি খুব দ্রুত অনেকগুলো বার্তা পাঠিয়েছেন। অনুগ্রহ করে ১ মিনিট অপেক্ষা করুন।');
             }
-          } else if (tool.name === 'handover_to_human') {
-            await env.DB.prepare('UPDATE customers SET human_takeover = 1 WHERE id = ?').bind(customer.id).run();
-            await env.DB.prepare('UPDATE conversations SET status = "human" WHERE customer_id = ?').bind(conversation.id).run();
-            await logAudit(env, null, 'AI_HANDOVER', 'customers', customer.id, tool.arguments || {});
+            return successResponse(request, { status: 'rate_limited_cooldown' });
           }
+
+          const aiOutput = await processWithAI(env, customer, text, recentMessages);
+
+          if (aiOutput.tool_call) {
+            const tool = aiOutput.tool_call;
+            if (tool.name === 'create_service_request') {
+              const validated = validateServiceRequest(tool.arguments, customer, text);
+              if (validated) {
+                const existingPending = await env.DB.prepare(
+                  'SELECT id FROM service_requests WHERE customer_id = ? AND status = "pending" AND created_at > datetime("now", "-24 hours")'
+                ).bind(customer.id).first();
+
+                if (!existingPending) {
+                  const reqRes = await env.DB.prepare(
+                    `INSERT INTO service_requests (customer_id, conversation_id, issue_description, address, preferred_date, preferred_time, status)
+                     VALUES (?, ?, ?, ?, ?, ?, 'pending')`
+                  ).bind(
+                    customer.id,
+                    conversation.id,
+                    validated.issue_description,
+                    validated.address,
+                    validated.preferred_date,
+                    validated.preferred_time
+                  ).run();
+
+                  if (validated.address && (!customer.address || customer.address === 'অজানা ঠিকানা')) {
+                    await env.DB.prepare('UPDATE customers SET address = ? WHERE id = ?').bind(validated.address, customer.id).run();
+                  }
+
+                  await logAudit(env, null, 'AI_CREATE_REQUEST', 'service_requests', reqRes.meta.last_row_id, validated);
+                }
+              }
+            } else if (tool.name === 'handover_to_human') {
+              await env.DB.prepare('UPDATE customers SET human_takeover = 1 WHERE id = ?').bind(customer.id).run();
+              await env.DB.prepare('UPDATE conversations SET status = "human" WHERE customer_id = ?').bind(conversation.id).run();
+              await logAudit(env, null, 'AI_HANDOVER', 'customers', customer.id, tool.arguments || {});
+            }
+          }
+
+          if (aiOutput.customer_update && Object.keys(aiOutput.customer_update).length > 0) {
+            if (aiOutput.customer_update.address) {
+              await env.DB.prepare('UPDATE customers SET address = ? WHERE id = ?').bind(aiOutput.customer_update.address, customer.id).run();
+            }
+            if (aiOutput.customer_update.name) {
+              await env.DB.prepare('UPDATE customers SET name = ? WHERE id = ?').bind(aiOutput.customer_update.name, customer.id).run();
+            }
+          }
+
+          const replyText = aiOutput.reply || 'ধন্যবাদ, আপনার অনুরোধ প্রক্রিয়া করা হচ্ছে।';
+          const sendResult = await sendWhatsAppMessage(env, phone, replyText);
+
+          await env.DB.prepare(
+            'INSERT INTO messages (customer_id, conversation_id, sender, text, message_type, delivery_status, ai_processed) VALUES (?, ?, "bot", ?, "text", ?, 1)'
+          ).bind(customer.id, conversation.id, replyText, sendResult.success ? 'sent' : 'failed').run();
+
+          return successResponse(request, {
+            status: 'success',
+            reply: replyText,
+            tool_executed: aiOutput.tool_call?.name || null
+          });
+        } catch (err) {
+          console.error('Webhook processing error:', err);
+          return errorResponse(request, err.message, 'INTERNAL_SERVER_ERROR', 500);
+        }
+      }
+
+      if (path === '/api/auth/login' && method === 'POST') {
+        const clientIp = request.headers.get('CF-Connecting-IP') || '127.0.0.1';
+        const { email, password } = await request.json();
+        if (!email || !password) return errorResponse(request, 'Email and password required', 'VALIDATION_ERROR');
+
+        const normEmail = email.toLowerCase().trim();
+
+        // Check brute force lockout (max 5 failed attempts within 15 minutes)
+        const lockRow = await env.DB.prepare(
+          'SELECT count(*) as failed_cnt FROM login_attempts WHERE (ip_address = ? OR email = ?) AND success = 0 AND attempted_at > datetime("now", "-15 minutes")'
+        ).bind(clientIp, normEmail).first();
+
+        if (lockRow && lockRow.failed_cnt >= 5) {
+          return errorResponse(request, 'অতিরিক্ত ভুল চেষ্টার কারণে লগইন ১৫ মিনিটের জন্য সাময়িকভাবে স্থগিত করা হয়েছে।', 'TOO_MANY_REQUESTS', 429);
         }
 
-        if (aiOutput.customer_update) {
-          if (aiOutput.customer_update.address && !customer.address) {
-            await env.DB.prepare('UPDATE customers SET address = ? WHERE id = ?').bind(aiOutput.customer_update.address, customer.id).run();
-          }
-          if (aiOutput.customer_update.name && customer.name === 'WhatsApp Customer') {
-            await env.DB.prepare('UPDATE customers SET name = ? WHERE id = ?').bind(aiOutput.customer_update.name, customer.id).run();
-          }
+        const user = await env.DB.prepare('SELECT * FROM admin_users WHERE email = ?').bind(normEmail).first();
+        if (!user) {
+          await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 0)').bind(clientIp, normEmail).run();
+          return errorResponse(request, 'Invalid credentials', 'AUTH_FAILED', 401);
         }
 
-        const replyText = aiOutput.reply || 'ধন্যবাদ, আপনার বার্তা পেয়েছি।';
-        const sendResult = await sendWhatsAppMessage(env, phone, replyText);
+        const isValid = await verifyPassword(password, user.password_hash);
+        if (!isValid) {
+          await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 0)').bind(clientIp, normEmail).run();
+          return errorResponse(request, 'Invalid credentials', 'AUTH_FAILED', 401);
+        }
 
+        // Successful login - record success and clear prior failed attempts
+        await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 1)').bind(clientIp, normEmail).run();
+        await env.DB.prepare('DELETE FROM login_attempts WHERE (ip_address = ? OR email = ?) AND success = 0').bind(clientIp, normEmail).run();
+
+        const sessionId = generateToken();
         await env.DB.prepare(
-          'INSERT INTO messages (customer_id, conversation_id, sender, text, message_type, delivery_status, ai_processed) VALUES (?, ?, "bot", ?, "text", ?, 1)'
-        ).bind(customer.id, conversation.id, replyText, sendResult.success ? 'sent' : 'failed').run();
+          'INSERT INTO sessions (id, admin_id, expires_at) VALUES (?, ?, datetime("now", "+30 days"))'
+        ).bind(sessionId, user.id).run();
+
+        await env.DB.prepare('UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').bind(user.id).run();
+        await logAudit(env, user.id, 'LOGIN', 'admin_users', user.id, { email: user.email }, clientIp);
+
+        const cookie = `ac_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
+        return successResponse(
+          request,
+          { token: sessionId, user: { id: user.id, email: user.email, name: user.name, role: user.role } },
+          200,
+          { 'Set-Cookie': cookie }
+        );
+      }
+
+      if (path === '/api/auth/logout' && method === 'POST') {
+        const authUser = await getAuthUser(request, env);
+        if (authUser) {
+          await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(authUser.session_id).run();
+          await logAudit(env, authUser.user_id, 'LOGOUT', 'sessions', authUser.session_id);
+        }
+        const clearCookie = 'ac_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
+        return successResponse(request, { loggedOut: true }, 200, { 'Set-Cookie': clearCookie });
+      }
+
+      const authUser = await getAuthUser(request, env);
+      if (!authUser) {
+        return errorResponse(request, 'Unauthorized access. Please login.', 'UNAUTHORIZED', 401);
+      }
+
+      if (path === '/api/auth/me' && method === 'GET') {
+        return successResponse(request, { user: { id: authUser.user_id, email: authUser.email, name: authUser.name, role: authUser.role } });
+      }
+
+      // Settings Endpoints
+      if (path === '/api/settings') {
+        if (method === 'GET') {
+          const rows = await env.DB.prepare('SELECT key, value FROM business_settings').all();
+          const settings = {};
+          if (rows.results) {
+            rows.results.forEach(r => { settings[r.key] = r.value; });
+          }
+          const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+          keys.forEach(k => {
+            if (!settings[k] && env[k]) settings[k] = env[k];
+          });
+          ['EVOLUTION_API_KEY', 'WEBHOOK_SECRET', 'AI_API_KEY'].forEach(k => {
+            if (settings[k]) settings[k] = '••••••••';
+          });
+          return successResponse(request, settings);
+        }
+        if (method === 'POST') {
+          if (!checkRole(authUser, ['admin'])) {
+            return errorResponse(request, 'Forbidden: Only admin can update settings', 'FORBIDDEN', 403);
+          }
+          const body = await request.json();
+          for (const [k, v] of Object.entries(body)) {
+            if (v === '••••••••') continue;
+            await env.DB.prepare(
+              'INSERT OR REPLACE INTO business_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
+            ).bind(k, String(v)).run();
+          }
+          await logAudit(env, authUser.user_id, 'UPDATE_SETTINGS', 'business_settings', null, body);
+          return successResponse(request, { saved: true });
+        }
+      }
+
+      if (path === '/api/settings/test-evolution' && method === 'POST') {
+        if (!checkRole(authUser, ['admin'])) {
+          return errorResponse(request, 'Forbidden: Only admin can test integrations', 'FORBIDDEN', 403);
+        }
+        const { url, key, instance } = await request.json();
+        try {
+          const actualKey = (key === '••••••••' || !key) ? await getRuntimeSetting(env, 'EVOLUTION_API_KEY') : key;
+          const actualUrl = url || await getRuntimeSetting(env, 'EVOLUTION_API_URL');
+          const actualInstance = instance || await getRuntimeSetting(env, 'EVOLUTION_INSTANCE');
+          const checkUrl = `${actualUrl.replace(/\/$/, '')}/instance/connectionState/${actualInstance}`;
+          const resp = await fetch(checkUrl, {
+            headers: { 'apikey': actualKey }
+          });
+          const resData = await resp.json();
+          return successResponse(request, { connected: resp.ok, data: resData });
+        } catch (err) {
+          return errorResponse(request, err.message, 'CONNECTION_FAILED', 500);
+        }
+      }
+
+      if (path === '/api/settings/test-ai' && method === 'POST') {
+        if (!checkRole(authUser, ['admin'])) {
+          return errorResponse(request, 'Forbidden: Only admin can test integrations', 'FORBIDDEN', 403);
+        }
+        const { provider, model, key } = await request.json();
+        const actualKey = (key === '••••••••' || !key) ? await getRuntimeSetting(env, 'AI_API_KEY') : key;
+        try {
+          if (provider === 'anthropic') {
+            const resp = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': actualKey,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: model || 'claude-3-5-sonnet-20241022',
+                max_tokens: 100,
+                messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
+              })
+            });
+            const data = await resp.json();
+            return successResponse(request, { reply: data.content?.[0]?.text || JSON.stringify(data) });
+          } else if (provider === 'openai') {
+            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${actualKey}`
+              },
+              body: JSON.stringify({
+                model: model || 'gpt-4o-mini',
+                max_tokens: 100,
+                messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
+              })
+            });
+            const data = await resp.json();
+            return successResponse(request, { reply: data.choices?.[0]?.message?.content || JSON.stringify(data) });
+          } else {
+            return successResponse(request, { reply: 'বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন সক্রিয় ও প্রস্তুত আছে!' });
+          }
+        } catch (err) {
+          return errorResponse(request, err.message, 'AI_TEST_FAILED', 500);
+        }
+      }
+
+      if (path === '/api/dashboard/stats' && method === 'GET') {
+        const customersCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers').first();
+        const activeChatsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM conversations WHERE status = "active"').first();
+        const pendingReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "pending"').first();
+        const scheduledReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "scheduled"').first();
+        const completedTodayCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "completed" AND date(updated_at) = date("now")').first();
+        const remindersDueCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers WHERE next_reminder_date <= date("now") AND bot_enabled = 1').first();
 
         return successResponse(request, {
-          status: 'success',
-          reply: replyText,
-          tool_executed: aiOutput.tool_call?.name || null
+          total_customers: customersCnt ? customersCnt.cnt : 0,
+          active_conversations: activeChatsCnt ? activeChatsCnt.cnt : 0,
+          pending_requests: pendingReqsCnt ? pendingReqsCnt.cnt : 0,
+          scheduled_requests: scheduledReqsCnt ? scheduledReqsCnt.cnt : 0,
+          completed_today: completedTodayCnt ? completedTodayCnt.cnt : 0,
+          reminders_due: remindersDueCnt ? remindersDueCnt.cnt : 0
         });
-      } catch (err) {
-        console.error('Webhook processing error:', err);
-        return errorResponse(request, err.message, 'INTERNAL_SERVER_ERROR', 500);
-      }
-    }
-
-    if (path === '/api/auth/login' && method === 'POST') {
-      const clientIp = request.headers.get('CF-Connecting-IP') || '127.0.0.1';
-      const { email, password } = await request.json();
-      if (!email || !password) return errorResponse(request, 'Email and password required', 'VALIDATION_ERROR');
-
-      const normEmail = email.toLowerCase().trim();
-
-      // Check brute force lockout (max 5 failed attempts within 15 minutes)
-      const lockRow = await env.DB.prepare(
-        'SELECT count(*) as failed_cnt FROM login_attempts WHERE (ip_address = ? OR email = ?) AND success = 0 AND attempted_at > datetime("now", "-15 minutes")'
-      ).bind(clientIp, normEmail).first();
-
-      if (lockRow && lockRow.failed_cnt >= 5) {
-        return errorResponse(request, 'অতিরিক্ত ভুল চেষ্টার কারণে লগইন ১৫ মিনিটের জন্য সাময়িকভাবে স্থগিত করা হয়েছে।', 'TOO_MANY_REQUESTS', 429);
       }
 
-      const user = await env.DB.prepare('SELECT * FROM admin_users WHERE email = ?').bind(normEmail).first();
-      if (!user) {
-        await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 0)').bind(clientIp, normEmail).run();
-        return errorResponse(request, 'Invalid credentials', 'AUTH_FAILED', 401);
-      }
-
-      const isValid = await verifyPassword(password, user.password_hash);
-      if (!isValid) {
-        await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 0)').bind(clientIp, normEmail).run();
-        return errorResponse(request, 'Invalid credentials', 'AUTH_FAILED', 401);
-      }
-
-      // Successful login - record success and clear prior failed attempts
-      await env.DB.prepare('INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, 1)').bind(clientIp, normEmail).run();
-      await env.DB.prepare('DELETE FROM login_attempts WHERE (ip_address = ? OR email = ?) AND success = 0').bind(clientIp, normEmail).run();
-
-      const sessionId = generateToken();
-      await env.DB.prepare(
-        'INSERT INTO sessions (id, admin_id, expires_at) VALUES (?, ?, datetime("now", "+30 days"))'
-      ).bind(sessionId, user.id).run();
-
-      await env.DB.prepare('UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').bind(user.id).run();
-      await logAudit(env, user.id, 'LOGIN', 'admin_users', user.id, { email: user.email });
-
-      const cookie = `ac_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
-      return successResponse(
-        request,
-        { token: sessionId, user: { id: user.id, email: user.email, name: user.name, role: user.role } },
-        200,
-        { 'Set-Cookie': cookie }
-      );
-    }
-
-    if (path === '/api/auth/logout' && method === 'POST') {
-      const authUser = await getAuthUser(request, env);
-      if (authUser && authUser.session_id) {
-        await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(authUser.session_id).run();
-      }
-      return successResponse(
-        request,
-        { logged_out: true },
-        200,
-        { 'Set-Cookie': 'ac_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' }
-      );
-    }
-
-    if (path === '/api/auth/me' && method === 'GET') {
-      const authUser = await getAuthUser(request, env);
-      if (!authUser) return errorResponse(request, 'Unauthorized', 'UNAUTHORIZED', 401);
-      return successResponse(request, { user: { id: authUser.user_id, email: authUser.email, name: authUser.name, role: authUser.role } });
-    }
-
-    const authUser = await getAuthUser(request, env);
-    if (!authUser) {
-      return errorResponse(request, 'Unauthorized access. Please login.', 'UNAUTHORIZED', 401);
-    }
-
-    if (path === '/api/settings') {
-      if (method === 'GET') {
-        const rows = await env.DB.prepare('SELECT key, value FROM business_settings').all();
-        const settings = {};
-        if (rows.results) {
-          rows.results.forEach(r => { settings[r.key] = r.value; });
-        }
-        const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
-        keys.forEach(k => {
-          if (!settings[k] && env[k]) settings[k] = env[k];
-        });
-
-        const secretKeys = ['EVOLUTION_API_KEY', 'WEBHOOK_SECRET', 'AI_API_KEY'];
-        secretKeys.forEach(secKey => {
-          if (settings[secKey] && settings[secKey].length > 0) {
-            settings[`_is_set_${secKey}`] = true;
-            settings[secKey] = '••••••••';
-          } else {
-            settings[`_is_set_${secKey}`] = false;
-            settings[secKey] = '';
-          }
-        });
-
-        return successResponse(request, settings);
-      }
-
-      if (method === 'POST') {
-        if (!checkRole(authUser, ['admin'])) {
-          return errorResponse(request, 'Forbidden: Admin role required to update settings', 'FORBIDDEN', 403);
-        }
-
-        const body = await request.json();
-        const secretKeys = ['EVOLUTION_API_KEY', 'WEBHOOK_SECRET', 'AI_API_KEY'];
-
-        for (const [k, v] of Object.entries(body)) {
-          if (secretKeys.includes(k) && (v === '••••••••' || /^•+$/.test(String(v).trim()))) {
-            continue;
-          }
-          await env.DB.prepare(
-            'INSERT OR REPLACE INTO business_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
-          ).bind(k, String(v)).run();
-        }
-        await logAudit(env, authUser.user_id, 'UPDATE_SETTINGS', 'business_settings', null, body);
-        return successResponse(request, { saved: true });
-      }
-    }
-
-    if (path === '/api/settings/test-evolution' && method === 'POST') {
-      if (!checkRole(authUser, ['admin'])) {
-        return errorResponse(request, 'Forbidden: Admin role required', 'FORBIDDEN', 403);
-      }
-      const { url, key, instance } = await request.json();
-      let activeKey = key;
-      if (!activeKey || activeKey === '••••••••') {
-        activeKey = await getRuntimeSetting(env, 'EVOLUTION_API_KEY');
-      }
-      try {
-        const checkUrl = `${url.replace(/\/$/, '')}/instance/connectionState/${instance}`;
-        const resp = await fetch(checkUrl, {
-          headers: { 'apikey': activeKey }
-        });
-        const resData = await resp.json();
-        return successResponse(request, { connected: resp.ok, data: resData });
-      } catch (err) {
-        return errorResponse(request, err.message, 'CONNECTION_FAILED', 500);
-      }
-    }
-
-    if (path === '/api/settings/test-ai' && method === 'POST') {
-      if (!checkRole(authUser, ['admin'])) {
-        return errorResponse(request, 'Forbidden: Admin role required', 'FORBIDDEN', 403);
-      }
-      const { provider, model, key } = await request.json();
-      let activeKey = key;
-      if (!activeKey || activeKey === '••••••••') {
-        activeKey = await getRuntimeSetting(env, 'AI_API_KEY');
-      }
-      try {
-        if (provider === 'anthropic') {
-          const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': activeKey,
-              'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-              model: model || 'claude-3-5-sonnet-20241022',
-              max_tokens: 100,
-              messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
-            })
-          });
-          const data = await resp.json();
-          return successResponse(request, { reply: data.content?.[0]?.text || JSON.stringify(data) });
-        } else if (provider === 'openai') {
-          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${activeKey}`
-            },
-            body: JSON.stringify({
-              model: model || 'gpt-4o-mini',
-              max_tokens: 100,
-              messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
-            })
-          });
-          const data = await resp.json();
-          return successResponse(request, { reply: data.choices?.[0]?.message?.content || JSON.stringify(data) });
-        } else {
-          return successResponse(request, { reply: 'বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন সক্রিয় ও প্রস্তুত আছে!' });
-        }
-      } catch (err) {
-        return errorResponse(request, err.message, 'AI_TEST_FAILED', 500);
-      }
-    }
-
-    if (path === '/api/dashboard/stats' && method === 'GET') {
-      const customersCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers').first();
-      const activeChatsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM conversations WHERE status = "active"').first();
-      const pendingReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "pending"').first();
-      const scheduledReqsCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "scheduled"').first();
-      const completedTodayCnt = await env.DB.prepare('SELECT count(*) as cnt FROM service_requests WHERE status = "completed" AND date(updated_at) = date("now")').first();
-      const remindersDueCnt = await env.DB.prepare('SELECT count(*) as cnt FROM customers WHERE next_reminder_date <= date("now")').first();
-
-      return successResponse(request, {
-        total_customers: customersCnt.cnt,
-        active_conversations: activeChatsCnt.cnt,
-        pending_requests: pendingReqsCnt.cnt,
-        scheduled_requests: scheduledReqsCnt.cnt,
-        completed_today: completedTodayCnt.cnt,
-        reminders_due: remindersDueCnt.cnt
-      });
-    }
-
-    if (path === '/api/customers') {
-      if (method === 'GET') {
-        const q = url.searchParams.get('q');
-        const status = url.searchParams.get('status');
-        let sql = 'SELECT * FROM customers WHERE 1=1';
-        const params = [];
-        if (q) {
-          sql += ' AND (name LIKE ? OR phone LIKE ? OR address LIKE ?)';
-          params.push(`%${q}%`, `%${q}%`, `%${q}%`);
-        }
-        if (status) {
-          sql += ' AND status = ?';
-          params.push(status);
-        }
-        sql += ' ORDER BY id DESC';
-        const stmt = params.length ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
-        const res = await stmt.all();
-        return successResponse(request, res.results || []);
-      }
-
-      if (method === 'POST') {
-        if (!checkRole(authUser, ['admin', 'manager'])) {
-          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-        }
-        const { name, phone, address, notes, status } = await request.json();
-        const normalized = normalizePhone(phone);
-        if (!normalized) return errorResponse(request, 'Valid phone number is required', 'VALIDATION_ERROR');
-
-        const ins = await env.DB.prepare(
-          'INSERT INTO customers (name, phone, address, notes, status) VALUES (?, ?, ?, ?, ?)'
-        ).bind(name || 'Customer', normalized, address || '', notes || '', status || 'new').run();
-        await logAudit(env, authUser.user_id, 'CREATE_CUSTOMER', 'customers', ins.meta.last_row_id, { phone: normalized, name });
-        return successResponse(request, { id: ins.meta.last_row_id });
-      }
-    }
-
-    if (path.startsWith('/api/customers/')) {
-      const parts = path.split('/');
-      const custId = parseInt(parts[3]);
-
-      if (parts[4] === 'takeover' && method === 'POST') {
-        if (!checkRole(authUser, ['admin', 'manager'])) {
-          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-        }
-        await env.DB.prepare('UPDATE customers SET human_takeover = 1 WHERE id = ?').bind(custId).run();
-        await env.DB.prepare('UPDATE conversations SET status = "human" WHERE customer_id = ?').bind(custId).run();
-        await logAudit(env, authUser.user_id, 'TAKEOVER', 'customers', custId, {});
-        return successResponse(request, { human_takeover: 1 });
-      }
-
-      if (parts[4] === 'resume-ai' && method === 'POST') {
-        if (!checkRole(authUser, ['admin', 'manager'])) {
-          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-        }
-        await env.DB.prepare('UPDATE customers SET human_takeover = 0 WHERE id = ?').bind(custId).run();
-        await env.DB.prepare('UPDATE conversations SET status = "active" WHERE customer_id = ?').bind(custId).run();
-        await logAudit(env, authUser.user_id, 'RESUME_AI', 'customers', custId, {});
-        return successResponse(request, { human_takeover: 0 });
-      }
-
-      if (parts[4] === 'messages') {
+      if (path === '/api/customers') {
         if (method === 'GET') {
+          const q = url.searchParams.get('q');
+          const status = url.searchParams.get('status');
+          let sql = 'SELECT * FROM customers WHERE 1=1';
+          const params = [];
+          if (q) {
+            sql += ' AND (name LIKE ? OR phone LIKE ? OR address LIKE ?)';
+            params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+          }
+          if (status) {
+            sql += ' AND status = ?';
+            params.push(status);
+          }
+          sql += ' ORDER BY updated_at DESC LIMIT 100';
+          const stmt = params.length ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
+          const res = await stmt.all();
+          return successResponse(request, res.results || []);
+        }
+
+        if (method === 'POST') {
+          if (!checkRole(authUser, ['admin', 'manager'])) {
+            return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+          }
+          const { name, phone, address, notes, status } = await request.json();
+          if (!phone) return errorResponse(request, 'Phone number required', 'VALIDATION_ERROR');
+          const normalized = normalizePhone(phone);
+          const ins = await env.DB.prepare(
+            'INSERT INTO customers (name, phone, address, notes, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+          ).bind(name || 'Customer', normalized, address || '', notes || '', status || 'new').run();
+          await logAudit(env, authUser.user_id, 'CREATE_CUSTOMER', 'customers', ins.meta.last_row_id, { name, phone: normalized });
+          return successResponse(request, { id: ins.meta.last_row_id });
+        }
+      }
+
+      if (path.startsWith('/api/customers/')) {
+        const parts = path.split('/');
+        const custId = parseInt(parts[3]);
+        const subAction = parts[4];
+
+        if (subAction === 'takeover' && method === 'POST') {
+          if (!checkRole(authUser, ['admin', 'manager'])) {
+            return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+          }
+          await env.DB.prepare('UPDATE customers SET human_takeover = 1 WHERE id = ?').bind(custId).run();
+          await env.DB.prepare('UPDATE conversations SET status = "human" WHERE customer_id = ?').bind(custId).run();
+          await logAudit(env, authUser.user_id, 'HUMAN_TAKEOVER_ON', 'customers', custId);
+          return successResponse(request, { human_takeover: true });
+        }
+
+        if (subAction === 'release' && method === 'POST') {
+          if (!checkRole(authUser, ['admin', 'manager'])) {
+            return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+          }
+          await env.DB.prepare('UPDATE customers SET human_takeover = 0 WHERE id = ?').bind(custId).run();
+          await env.DB.prepare('UPDATE conversations SET status = "active" WHERE customer_id = ?').bind(custId).run();
+          await logAudit(env, authUser.user_id, 'HUMAN_TAKEOVER_OFF', 'customers', custId);
+          return successResponse(request, { human_takeover: false });
+        }
+
+        if (subAction === 'messages' && method === 'GET') {
           const msgs = await env.DB.prepare(
             'SELECT * FROM messages WHERE customer_id = ? ORDER BY id ASC'
           ).bind(custId).all();
           return successResponse(request, msgs.results || []);
         }
-        if (method === 'POST') {
+
+        if (subAction === 'send' && method === 'POST') {
           if (!checkRole(authUser, ['admin', 'manager'])) {
             return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
           }
           const { text } = await request.json();
-          if (!text) return errorResponse(request, 'Text required');
+          if (!text) return errorResponse(request, 'Message text required');
           const customer = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(custId).first();
           if (!customer) return errorResponse(request, 'Customer not found', 'NOT_FOUND', 404);
 
           const sendRes = await sendWhatsAppMessage(env, customer.phone, text);
-          const ins = await env.DB.prepare(
-            'INSERT INTO messages (customer_id, sender, text, message_type, delivery_status) VALUES (?, "admin", ?, "text", ?)'
+          await env.DB.prepare(
+            'INSERT INTO messages (customer_id, sender, text, message_type, delivery_status, sent_by_admin) VALUES (?, "agent", ?, "text", ?, 1)'
           ).bind(custId, text, sendRes.success ? 'sent' : 'failed').run();
-
-          await logAudit(env, authUser.user_id, 'ADMIN_REPLY', 'messages', ins.meta.last_row_id, { customer_id: custId, text });
-          return successResponse(request, { message_id: ins.meta.last_row_id, delivered: sendRes.success });
+          await logAudit(env, authUser.user_id, 'SEND_MANUAL_WHATSAPP', 'messages', null, { to: customer.phone, text });
+          return successResponse(request, { sent: true, provider_result: sendRes });
         }
-      }
 
-      if (!parts[4]) {
         if (method === 'GET') {
           const cust = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(custId).first();
           if (!cust) return errorResponse(request, 'Customer not found', 'NOT_FOUND', 404);
@@ -1054,168 +1023,204 @@ export default {
           const body = await request.json();
           await env.DB.prepare(
             'UPDATE customers SET name = coalesce(?, name), address = coalesce(?, address), notes = coalesce(?, notes), status = coalesce(?, status), updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-          ).bind(body.name, body.address, body.notes, body.status, custId).run();
+          ).bind(body.name ?? null, body.address ?? null, body.notes ?? null, body.status ?? null, custId).run();
           await logAudit(env, authUser.user_id, 'UPDATE_CUSTOMER', 'customers', custId, body);
           return successResponse(request, { updated: true });
         }
       }
-    }
 
-    if (path === '/api/service-requests') {
-      if (method === 'GET') {
-        const status = url.searchParams.get('status');
-        let sql = `
-          SELECT sr.*, c.name as customer_name, c.phone as customer_phone
-          FROM service_requests sr
-          JOIN customers c ON sr.customer_id = c.id
-          WHERE 1=1
-        `;
-        const params = [];
-        if (status) {
-          sql += ' AND sr.status = ?';
-          params.push(status);
+      if (path === '/api/service-requests') {
+        if (method === 'GET') {
+          const status = url.searchParams.get('status');
+          let sql = `
+            SELECT sr.*, c.name as customer_name, c.phone as customer_phone
+            FROM service_requests sr
+            JOIN customers c ON sr.customer_id = c.id
+            WHERE 1=1
+          `;
+          const params = [];
+          if (status) {
+            sql += ' AND sr.status = ?';
+            params.push(status);
+          }
+          sql += ' ORDER BY sr.id DESC';
+          const stmt = params.length ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
+          const res = await stmt.all();
+          return successResponse(request, res.results || []);
         }
-        sql += ' ORDER BY sr.id DESC';
-        const stmt = params.length ? env.DB.prepare(sql).bind(...params) : env.DB.prepare(sql);
-        const res = await stmt.all();
+
+        if (method === 'POST') {
+          if (!checkRole(authUser, ['admin', 'manager'])) {
+            return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+          }
+          const body = await request.json();
+          const ins = await env.DB.prepare(
+            `INSERT INTO service_requests (customer_id, issue_description, address, preferred_date, preferred_time, status, notes)
+             VALUES (?, ?, ?, ?, ?, 'pending', ?)`
+          ).bind(body.customer_id, body.issue_description, body.address, body.preferred_date || '', body.preferred_time || '', body.notes || '').run();
+          await logAudit(env, authUser.user_id, 'CREATE_REQUEST', 'service_requests', ins.meta.last_row_id, body);
+          return successResponse(request, { id: ins.meta.last_row_id });
+        }
+      }
+
+      if (path.startsWith('/api/service-requests/')) {
+        const id = parseInt(path.split('/')[3]);
+        if (method === 'GET') {
+          const reqRow = await env.DB.prepare(
+            `SELECT sr.*, c.name as customer_name, c.phone as customer_phone
+             FROM service_requests sr
+             JOIN customers c ON sr.customer_id = c.id
+             WHERE sr.id = ?`
+          ).bind(id).first();
+          if (!reqRow) return errorResponse(request, 'Service request not found', 'NOT_FOUND', 404);
+          return successResponse(request, reqRow);
+        }
+
+        if (method === 'PUT') {
+          if (!checkRole(authUser, ['admin', 'manager'])) {
+            return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+          }
+          const body = await request.json();
+          await env.DB.prepare(
+            `UPDATE service_requests SET
+               issue_description = coalesce(?, issue_description),
+               address = coalesce(?, address),
+               scheduled_date = coalesce(?, scheduled_date),
+               scheduled_time = coalesce(?, scheduled_time),
+               technician_assigned = coalesce(?, technician_assigned),
+               status = coalesce(?, status),
+               cost_estimate = coalesce(?, cost_estimate),
+               cost_final = coalesce(?, cost_final),
+               payment_status = coalesce(?, payment_status),
+               notes = coalesce(?, notes),
+               updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+          ).bind(
+            body.issue_description ?? null,
+            body.address ?? null,
+            body.scheduled_date ?? null,
+            body.scheduled_time ?? null,
+            body.technician_assigned ?? null,
+            body.status ?? null,
+            body.cost_estimate ?? null,
+            body.cost_final ?? null,
+            body.payment_status ?? null,
+            body.notes ?? null,
+            id
+          ).run();
+
+          if (body.status === 'completed') {
+            const reqRow = await env.DB.prepare('SELECT customer_id FROM service_requests WHERE id = ?').bind(id).first();
+            if (reqRow) {
+              const today = new Date().toISOString().split('T')[0];
+              const remSetting = await env.DB.prepare('SELECT interval_days FROM reminder_settings WHERE active = 1 LIMIT 1').first();
+              const interval = remSetting ? parseInt(remSetting.interval_days) || 90 : 90;
+              const nextDate = new Date();
+              nextDate.setDate(nextDate.getDate() + interval);
+              const nextDateStr = nextDate.toISOString().split('T')[0];
+              await env.DB.prepare(
+                'UPDATE customers SET last_service_date = ?, next_reminder_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+              ).bind(today, nextDateStr, reqRow.customer_id).run();
+            }
+          }
+
+          await logAudit(env, authUser.user_id, 'UPDATE_REQUEST', 'service_requests', id, body);
+          return successResponse(request, { updated: true });
+        }
+      }
+
+      if (path === '/api/reminders/settings') {
+        if (method === 'GET') {
+          const setting = await env.DB.prepare('SELECT * FROM reminder_settings WHERE active = 1 LIMIT 1').first();
+          return successResponse(request, setting || {});
+        }
+        if (method === 'PUT') {
+          if (!checkRole(authUser, ['admin'])) {
+            return errorResponse(request, 'Forbidden: Only admin can update reminder rules', 'FORBIDDEN', 403);
+          }
+          const body = await request.json();
+          const existing = await env.DB.prepare('SELECT id FROM reminder_settings WHERE active = 1 LIMIT 1').first();
+          if (existing) {
+            await env.DB.prepare(
+              'UPDATE reminder_settings SET name = ?, interval_days = ?, message_template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+            ).bind(body.name, body.interval_days, body.message_template, existing.id).run();
+          } else {
+            await env.DB.prepare(
+              'INSERT INTO reminder_settings (name, interval_days, message_template, active) VALUES (?, ?, ?, 1)'
+            ).bind(body.name || 'Standard 90-day reminder', body.interval_days || 90, body.message_template || 'আসসালামু আলাইকুম {{customer_name}}!').run();
+          }
+          await logAudit(env, authUser.user_id, 'UPDATE_REMINDER_SETTINGS', 'reminder_settings', null, body);
+          return successResponse(request, { saved: true });
+        }
+      }
+
+      if (path === '/api/reminders/logs' && method === 'GET') {
+        const logs = await env.DB.prepare(
+          `SELECT rl.*, c.name as customer_name, c.phone as customer_phone
+           FROM reminder_logs rl
+           JOIN customers c ON rl.customer_id = c.id
+           ORDER BY rl.id DESC LIMIT 100`
+        ).all();
+        return successResponse(request, logs.results || []);
+      }
+
+      if (path === '/api/reminders/trigger-now' && method === 'POST') {
+        if (!checkRole(authUser, ['admin', 'manager'])) {
+          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
+        }
+        const stats = await processDueReminders(env, `manual_by_${authUser.email}`);
+        await logAudit(env, authUser.user_id, 'TRIGGER_REMINDERS_MANUAL', 'reminder_logs', null, stats);
+        return successResponse(request, { message: 'Reminders triggered successfully', stats });
+      }
+
+      if (path === '/api/bot-config') {
+        if (method === 'GET') {
+          const rows = await env.DB.prepare('SELECT key, value FROM bot_flow_config').all();
+          const config = {};
+          if (rows.results) {
+            rows.results.forEach(r => { config[r.key] = r.value; });
+          }
+          return successResponse(request, config);
+        }
+        if (method === 'POST') {
+          if (!checkRole(authUser, ['admin'])) {
+            return errorResponse(request, 'Forbidden: Only admin can update bot config', 'FORBIDDEN', 403);
+          }
+          const body = await request.json();
+          for (const [k, v] of Object.entries(body)) {
+            await env.DB.prepare(
+              'INSERT OR REPLACE INTO bot_flow_config (key, value, updated_at, updated_by) VALUES (?, ?, CURRENT_TIMESTAMP, ?)'
+            ).bind(k, String(v), authUser.user_id).run();
+          }
+          await logAudit(env, authUser.user_id, 'UPDATE_BOT_CONFIG', 'bot_flow_config', null, body);
+          return successResponse(request, { saved: true });
+        }
+      }
+
+      if (path.startsWith('/api/bot-config/') && method === 'PUT') {
+        if (!checkRole(authUser, ['admin'])) {
+          return errorResponse(request, 'Forbidden: Only admin can update bot config', 'FORBIDDEN', 403);
+        }
+        const key = path.split('/')[3];
+        const { value } = await request.json();
+        if (!value) return errorResponse(request, 'Value required');
+        await env.DB.prepare(
+          'UPDATE bot_flow_config SET value = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ? WHERE key = ?'
+        ).bind(value, authUser.user_id, key).run();
+        await logAudit(env, authUser.user_id, 'UPDATE_BOT_CONFIG', 'bot_flow_config', null, { key, value });
+        return successResponse(request, { updated: true });
+      }
+
+      if (path === '/api/audit-logs') {
+        const res = await env.DB.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50').all();
         return successResponse(request, res.results || []);
       }
 
-      if (method === 'POST') {
-        if (!checkRole(authUser, ['admin', 'manager'])) {
-          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-        }
-        const body = await request.json();
-        const ins = await env.DB.prepare(
-          `INSERT INTO service_requests (customer_id, issue_description, address, preferred_date, preferred_time, status, notes)
-           VALUES (?, ?, ?, ?, ?, 'pending', ?)`
-        ).bind(body.customer_id, body.issue_description, body.address, body.preferred_date || '', body.preferred_time || '', body.notes || '').run();
-        await logAudit(env, authUser.user_id, 'CREATE_REQUEST', 'service_requests', ins.meta.last_row_id, body);
-        return successResponse(request, { id: ins.meta.last_row_id });
-      }
+      return errorResponse(request, 'Endpoint not found', 'NOT_FOUND', 404);
+    } catch (err) {
+      console.error('Unhandled server error in fetch:', err);
+      return errorResponse(request, err.message || 'Internal Server Error', 'INTERNAL_SERVER_ERROR', 500);
     }
-
-    if (path.startsWith('/api/service-requests/')) {
-      const id = parseInt(path.split('/')[3]);
-      if (method === 'GET') {
-        const reqRow = await env.DB.prepare(
-          `SELECT sr.*, c.name as customer_name, c.phone as customer_phone
-           FROM service_requests sr
-           JOIN customers c ON sr.customer_id = c.id
-           WHERE sr.id = ?`
-        ).bind(id).first();
-        if (!reqRow) return errorResponse(request, 'Service request not found', 'NOT_FOUND', 404);
-        return successResponse(request, reqRow);
-      }
-
-      if (method === 'PUT') {
-        if (!checkRole(authUser, ['admin', 'manager'])) {
-          return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-        }
-        const body = await request.json();
-        await env.DB.prepare(
-          `UPDATE service_requests SET
-             issue_description = coalesce(?, issue_description),
-             address = coalesce(?, address),
-             scheduled_date = coalesce(?, scheduled_date),
-             scheduled_time = coalesce(?, scheduled_time),
-             technician_assigned = coalesce(?, technician_assigned),
-             status = coalesce(?, status),
-             cost_estimate = coalesce(?, cost_estimate),
-             cost_final = coalesce(?, cost_final),
-             payment_status = coalesce(?, payment_status),
-             notes = coalesce(?, notes),
-             updated_at = CURRENT_TIMESTAMP
-           WHERE id = ?`
-        ).bind(
-          body.issue_description, body.address, body.scheduled_date, body.scheduled_time,
-          body.technician_assigned, body.status, body.cost_estimate, body.cost_final,
-          body.payment_status, body.notes, id
-        ).run();
-
-        if (body.status === 'completed') {
-          const reqRow = await env.DB.prepare('SELECT customer_id FROM service_requests WHERE id = ?').bind(id).first();
-          if (reqRow) {
-            const today = new Date().toISOString().split('T')[0];
-            const remSetting = await env.DB.prepare('SELECT interval_days FROM reminder_settings WHERE active = 1 LIMIT 1').first();
-            const interval = remSetting ? parseInt(remSetting.interval_days) || 90 : 90;
-            const nextDate = new Date();
-            nextDate.setDate(nextDate.getDate() + interval);
-            const nextDateStr = nextDate.toISOString().split('T')[0];
-
-            await env.DB.prepare(
-              'UPDATE customers SET last_service_date = ?, next_reminder_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-            ).bind(today, nextDateStr, reqRow.customer_id).run();
-          }
-        }
-
-        await logAudit(env, authUser.user_id, 'UPDATE_REQUEST', 'service_requests', id, body);
-        return successResponse(request, { updated: true });
-      }
-    }
-
-    if (path === '/api/reminders/settings') {
-      const res = await env.DB.prepare('SELECT * FROM reminder_settings ORDER BY id ASC').all();
-      return successResponse(request, res.results || []);
-    }
-
-    if (path.startsWith('/api/reminders/settings/') && method === 'PUT') {
-      if (!checkRole(authUser, ['admin'])) {
-        return errorResponse(request, 'Forbidden: Admin role required', 'FORBIDDEN', 403);
-      }
-      const id = parseInt(path.split('/')[4]);
-      const body = await request.json();
-      await env.DB.prepare(
-        'UPDATE reminder_settings SET name = coalesce(?, name), interval_days = coalesce(?, interval_days), message_template = coalesce(?, message_template), updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).bind(body.name, body.interval_days, body.message_template, id).run();
-      await logAudit(env, authUser.user_id, 'UPDATE_REMINDER_SETTING', 'reminder_settings', id, body);
-      return successResponse(request, { updated: true });
-    }
-
-    if (path === '/api/reminders/logs') {
-      const res = await env.DB.prepare(
-        `SELECT rl.*, c.name as customer_name, c.phone as customer_phone
-         FROM reminder_logs rl
-         JOIN customers c ON rl.customer_id = c.id
-         ORDER BY rl.id DESC LIMIT 50`
-      ).all();
-      return successResponse(request, res.results || []);
-    }
-
-    if (path === '/api/reminders/trigger' && method === 'POST') {
-      if (!checkRole(authUser, ['admin', 'manager'])) {
-        return errorResponse(request, 'Forbidden: Read-only access for viewer', 'FORBIDDEN', 403);
-      }
-      const stats = await processDueReminders(env, `admin_manual_${authUser.user_id}`);
-      await logAudit(env, authUser.user_id, 'TRIGGER_REMINDERS', 'reminder_logs', null, stats);
-      return successResponse(request, stats);
-    }
-
-    if (path === '/api/bot-config') {
-      const res = await env.DB.prepare('SELECT * FROM bot_flow_config ORDER BY id ASC').all();
-      return successResponse(request, res.results || []);
-    }
-
-    if (path.startsWith('/api/bot-config/') && method === 'PUT') {
-      if (!checkRole(authUser, ['admin'])) {
-        return errorResponse(request, 'Forbidden: Admin role required', 'FORBIDDEN', 403);
-      }
-      const key = path.split('/')[3];
-      const { value } = await request.json();
-      if (!value) return errorResponse(request, 'Value required');
-      await env.DB.prepare(
-        'UPDATE bot_flow_config SET value = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ? WHERE key = ?'
-      ).bind(value, authUser.user_id, key).run();
-      await logAudit(env, authUser.user_id, 'UPDATE_BOT_CONFIG', 'bot_flow_config', null, { key, value });
-      return successResponse(request, { updated: true });
-    }
-
-    if (path === '/api/audit-logs') {
-      const res = await env.DB.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50').all();
-      return successResponse(request, res.results || []);
-    }
-
-    return errorResponse(request, 'Endpoint not found', 'NOT_FOUND', 404);
   },
 
   async scheduled(event, env, ctx) {
