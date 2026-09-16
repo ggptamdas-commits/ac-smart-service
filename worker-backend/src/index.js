@@ -1,5 +1,334 @@
-// AC Smart Service Dashboard - Production Worker Backend & Dashboard
-import htmlContent from './dashboard-html.js';
+// AC Smart Service Dashboard - Production Worker Backend with Settings Hub
+let cachedHtml = null;
+let lastFetchTime = 0;
+
+async function getDashboardHTML(env) {
+  const now = Date.now();
+  if (cachedHtml && (now - lastFetchTime < 60000)) {
+    return cachedHtml;
+  }
+  try {
+    const row = await env.DB.prepare("SELECT value FROM business_settings WHERE key = 'dashboard_html'").first();
+    if (row && row.value && row.value.length > 1000) {
+      cachedHtml = row.value;
+      lastFetchTime = now;
+      return cachedHtml;
+    }
+  } catch (e) {
+    console.error('Error fetching dashboard from D1:', e);
+  }
+
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/ggptamdas-commits/ac-smart-service/main/dashboard/index.html', {
+      headers: { 'User-Agent': 'Cloudflare-Worker' }
+    });
+    if (res.ok) {
+      cachedHtml = await res.text();
+      lastFetchTime = now;
+      return cachedHtml;
+    }
+  } catch (err) {
+    console.error('Error fetching dashboard from GitHub:', err);
+  }
+
+  if (cachedHtml) return cachedHtml;
+  return '<!DOCTYPE html><html lang="bn"><head><meta charset="UTF-8"><title>AC Smart Service</title><meta http-equiv="refresh" content="3"><script src="https://cdn.tailwindcss.com"></script></head><body class="flex items-center justify-center h-screen bg-slate-900 text-white"><div class="text-center"><h1 class="text-2xl font-bold">❄️ AC Smart Service Dashboard</h1><p class="text-slate-400 mt-2">ড্যাশবোর্ড সিঙ্ক হচ্ছে... অনুগ্রহ করে ৩ সেকেন্ড অপেক্ষা করুন।</p></div></body></html>';
+}
+
+async function getRuntimeSetting(env, key, defaultVal = '') {
+  try {
+    const row = await env.DB.prepare('SELECT value FROM business_settings WHERE key = ?').bind(key).first();
+    if (row && row.value !== undefined && row.value !== null && row.value !== '') {
+      return row.value;
+    }
+  } catch (e) {}
+  return env[key] || defaultVal;
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    256
+  );
+  const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return 'pbkdf2$' + saltHex + '$' + hashHex;
+}
+
+async function verifyPassword(password, storedHash) {
+  try {
+    const parts = storedHash.split('$');
+    if (parts.length !== 3 || parts[0] !== 'pbkdf2') return false;
+    const saltHex = parts[1];
+    const targetHashHex = parts[2];
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      keyMaterial,
+      256
+    );
+    const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex === targetHashHex;
+  } catch (e) {
+    return false;
+  }
+}
+
+function generateToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function jsonResponse(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret',
+      ...extraHeaders
+    }
+  });
+}
+
+function errorResponse(message, code = 'BAD_REQUEST', status = 400) {
+  return jsonResponse({ success: false, error: { code, message } }, status);
+}
+
+function successResponse(data, status = 200, extraHeaders = {}) {
+  return jsonResponse({ success: true, data }, status, extraHeaders);
+}
+
+async function getAuthUser(request, env) {
+  const authHeader = request.headers.get('Authorization');
+  let token = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  } else {
+    const cookie = request.headers.get('Cookie');
+    if (cookie) {
+      const match = cookie.match(/ac_session=([a-f0-9]+)/);
+      if (match) token = match[1];
+    }
+  }
+  if (!token) return null;
+
+  const session = await env.DB.prepare(
+    'SELECT s.*, u.email, u.name, u.role, u.active FROM sessions s JOIN admin_users u ON s.admin_id = u.id WHERE s.id = ? AND s.expires_at > datetime("now")'
+  ).bind(token).first();
+
+  if (!session || !session.active) return null;
+  return session;
+}
+
+async function logAudit(env, adminId, action, tableName, recordId, changes, ip = '') {
+  try {
+    await env.DB.prepare(
+      'INSERT INTO audit_logs (admin_id, action, table_name, record_id, changes, ip_hash) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(adminId, action, tableName, recordId, typeof changes === 'string' ? changes : JSON.stringify(changes), ip).run();
+  } catch (err) {
+    console.error('Audit log failed:', err);
+  }
+}
+
+async function sendWhatsAppMessage(env, phone, text) {
+  const apiUrl = await getRuntimeSetting(env, 'EVOLUTION_API_URL');
+  const apiKey = await getRuntimeSetting(env, 'EVOLUTION_API_KEY');
+  const instance = await getRuntimeSetting(env, 'EVOLUTION_INSTANCE');
+
+  if (!apiUrl || !apiKey || !instance) {
+    console.warn('Evolution API not configured. Local simulation:', text);
+    return { simulated: true, success: true };
+  }
+
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const url = `${apiUrl.replace(/\/$/, '')}/message/sendText/${instance}`;
+  
+  const payload = {
+    number: cleanPhone,
+    options: { delay: 1200, presence: 'composing', linkPreview: false },
+    textMessage: { text }
+  };
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await resp.json();
+    return { success: resp.ok, result };
+  } catch (err) {
+    console.error('Error sending WhatsApp message via Evolution API:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+async function processWithAI(env, customer, incomingText, recentMessages) {
+  const promptRow = await env.DB.prepare("SELECT value FROM bot_flow_config WHERE key = 'system_prompt'").first();
+  const systemPrompt = promptRow ? promptRow.value : 'আপনি "এসি কেয়ার টিম"-এর একজন পেশাদার WhatsApp AC service assistant।';
+
+  const aiProvider = await getRuntimeSetting(env, 'AI_PROVIDER', 'fallback');
+  const aiModel = await getRuntimeSetting(env, 'AI_MODEL', '');
+  const aiApiKey = await getRuntimeSetting(env, 'AI_API_KEY', '');
+
+  const history = recentMessages.map(m => ({
+    role: m.sender === 'customer' ? 'user' : 'assistant',
+    content: m.text || ''
+  }));
+  history.push({ role: 'user', content: incomingText });
+
+  const aiInstructions = `${systemPrompt}
+
+CURRENT CUSTOMER CONTEXT:
+- Customer ID: ${customer.id}
+- Name: ${customer.name || 'অজানা'}
+- Phone: ${customer.phone}
+- Saved Address: ${customer.address || 'নথিভুক্ত নেই'}
+- Status: ${customer.status}
+
+STRICT JSON OUTPUT REQUIREMENT:
+You must reply ONLY in raw valid JSON format matching this schema:
+{
+  "reply": "বাংলা ভাষায় গ্রাহকের জন্য বন্ধুত্বপূর্ণ উত্তর",
+  "intent": "general_query" | "service_request" | "inquiry" | "handover",
+  "state": "collecting_info" | "ready_to_create" | "completed",
+  "customer_update": {
+    "name": "optional updated name",
+    "address": "optional updated address"
+  },
+  "tool_call": null or {
+    "name": "create_service_request",
+    "arguments": {
+      "issue_description": "এসির সমস্যার বর্ণনা",
+      "address": "সার্ভিসের ঠিকানা",
+      "preferred_date": "সুবিধাজনক তারিখ (optional)",
+      "preferred_time": "সুবিধাজনক সময় (optional)"
+    }
+  } or {
+    "name": "handover_to_human",
+    "arguments": {
+      "reason": "Customer requested human or emergency"
+    }
+  }
+}
+CRITICAL RULES:
+1. Never guess technician availability, price, or exact arrival time.
+2. If customer gives their address and issue, you can trigger create_service_request tool_call.
+3. Do NOT include markdown code blocks like \`\`\`json. Output raw JSON only.`;
+
+  if (aiApiKey && (aiProvider === 'anthropic' || aiProvider === 'openai')) {
+    try {
+      if (aiProvider === 'anthropic') {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': aiApiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: aiModel || 'claude-3-5-sonnet-20241022',
+            max_tokens: 800,
+            system: aiInstructions,
+            messages: history
+          })
+        });
+        const data = await resp.json();
+        if (data.content && data.content[0] && data.content[0].text) {
+          const rawText = data.content[0].text.trim().replace(/^```json/, '').replace(/```$/, '').trim();
+          return JSON.parse(rawText);
+        }
+      } else if (aiProvider === 'openai') {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${aiApiKey}`
+          },
+          body: JSON.stringify({
+            model: aiModel || 'gpt-4o-mini',
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: aiInstructions },
+              ...history
+            ]
+          })
+        });
+        const data = await resp.json();
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          return JSON.parse(data.choices[0].message.content);
+        }
+      }
+    } catch (err) {
+      console.error('AI provider call failed:', err);
+    }
+  }
+
+  const lower = incomingText.toLowerCase();
+  if (lower.includes('মানুষ') || lower.includes('agent') || lower.includes('কথা বলব') || lower.includes('জরুরি') || lower.includes('human')) {
+    return {
+      reply: 'আপনার অনুরোধটি আমাদের স্পেশালিস্ট টিমের কাছে স্থানান্তর করা হয়েছে। একজন দক্ষ প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন।',
+      intent: 'handover',
+      state: 'completed',
+      customer_update: {},
+      tool_call: { name: 'handover_to_human', arguments: { reason: 'User requested human agent' } }
+    };
+  }
+
+  const isAddressGiven = customer.address || lower.includes('রোড') || lower.includes('বাসা') || lower.includes('গ্রাম') || lower.includes('জেলা') || lower.includes('street') || lower.includes('house') || lower.includes('صبيا');
+  const isIssueGiven = lower.includes('ঠান্ডা') || lower.includes('পানি') || lower.includes('শব্দ') || lower.includes('গ্যাস') || lower.includes('কুলিং') || lower.includes('লিক') || lower.includes('ac') || lower.includes('সার্ভিস');
+
+  if (isIssueGiven && isAddressGiven) {
+    return {
+      reply: 'ধন্যবাদ! আপনার সমস্যা ও ঠিকানার তথ্য পেয়েছি। সার্ভিস রিকোয়েস্ট তৈরি করা হচ্ছে। আমাদের প্রতিনিধি শীঘ্রই সময় চূড়ান্ত করতে যোগাযোগ করবেন।',
+      intent: 'service_request',
+      state: 'ready_to_create',
+      customer_update: !customer.address ? { address: incomingText } : {},
+      tool_call: {
+        name: 'create_service_request',
+        arguments: {
+          issue_description: incomingText,
+          address: customer.address || incomingText,
+          preferred_date: 'যেকোনো সময়',
+          preferred_time: 'সকাল/বিকাল'
+        }
+      }
+    };
+  }
+
+  if (isIssueGiven && !customer.address) {
+    return {
+      reply: 'আপনার এসির সমস্যাটি বুঝতে পেরেছি। সার্ভিসিংয়ের জন্য অনুগ্রহ করে আপনার সম্পূর্ণ ঠিকানা এবং সুবিধাজনক সময়টি লিখে পাঠান।',
+      intent: 'service_request',
+      state: 'collecting_info',
+      customer_update: {},
+      tool_call: null
+    };
+  }
+
+  return {
+    reply: 'আসসালামু আলাইকুম! এসি কেয়ার টিমে স্বাগতম। আপনার এসিতে কী ধরনের সমস্যা হচ্ছে (যেমন: ঠান্ডা না হওয়া, পানি পড়া, গ্যাস রিফিল) তা দয়া করে বিস্তারিত জানাবেন কি?',
+    intent: 'general_query',
+    state: 'collecting_info',
+    customer_update: {},
+    tool_call: null
+  };
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -29,12 +358,12 @@ export default {
     }
 
     if (path === '/' || path === '/dashboard') {
-      return new Response(htmlContent, {
+      const html = await getDashboardHTML(env);
+      return new Response(html, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
       });
     }
 
-    // Webhook Messages Endpoint (POST /webhook/messages)
     if (path === '/webhook/messages') {
       if (method !== 'POST') return errorResponse('Method not allowed', 'METHOD_NOT_ALLOWED', 405);
 
@@ -138,7 +467,7 @@ export default {
             await logAudit(env, null, 'AI_CREATE_REQUEST', 'service_requests', reqRes.meta.last_row_id, args);
           } else if (tool.name === 'handover_to_human') {
             await env.DB.prepare('UPDATE customers SET human_takeover = 1 WHERE id = ?').bind(customer.id).run();
-            await env.DB.prepare('UPDATE conversations SET status = "human" WHERE id = ?').bind(conversation.id).run();
+            await env.DB.prepare('UPDATE conversations SET status = "human" WHERE customer_id = ?').bind(conversation.id).run();
             await logAudit(env, null, 'AI_HANDOVER', 'customers', customer.id, tool.arguments);
           }
         }
@@ -209,6 +538,88 @@ export default {
     const authUser = await getAuthUser(request, env);
     if (!authUser) {
       return errorResponse('Unauthorized access. Please login.', 'UNAUTHORIZED', 401);
+    }
+
+    // ⚙️ SETTINGS ENDPOINTS (GET & POST /api/settings)
+    if (path === '/api/settings') {
+      if (method === 'GET') {
+        const rows = await env.DB.prepare('SELECT key, value FROM business_settings').all();
+        const settings = {};
+        if (rows.results) {
+          rows.results.forEach(r => { settings[r.key] = r.value; });
+        }
+        const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+        keys.forEach(k => {
+          if (!settings[k] && env[k]) settings[k] = env[k];
+        });
+        return successResponse(settings);
+      }
+      if (method === 'POST') {
+        const body = await request.json();
+        for (const [k, v] of Object.entries(body)) {
+          await env.DB.prepare(
+            'INSERT OR REPLACE INTO business_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
+          ).bind(k, String(v)).run();
+        }
+        await logAudit(env, authUser.admin_id, 'UPDATE_SETTINGS', 'business_settings', null, body);
+        return successResponse({ saved: true });
+      }
+    }
+
+    if (path === '/api/settings/test-evolution' && method === 'POST') {
+      const { url, key, instance } = await request.json();
+      try {
+        const checkUrl = `${url.replace(/\/$/, '')}/instance/connectionState/${instance}`;
+        const resp = await fetch(checkUrl, {
+          headers: { 'apikey': key }
+        });
+        const resData = await resp.json();
+        return successResponse({ connected: resp.ok, data: resData });
+      } catch (err) {
+        return errorResponse(err.message, 'CONNECTION_FAILED', 500);
+      }
+    }
+
+    if (path === '/api/settings/test-ai' && method === 'POST') {
+      const { provider, model, key } = await request.json();
+      try {
+        if (provider === 'anthropic') {
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': key,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: model || 'claude-3-5-sonnet-20241022',
+              max_tokens: 100,
+              messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
+            })
+          });
+          const data = await resp.json();
+          return successResponse({ reply: data.content?.[0]?.text || JSON.stringify(data) });
+        } else if (provider === 'openai') {
+          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${key}`
+            },
+            body: JSON.stringify({
+              model: model || 'gpt-4o-mini',
+              max_tokens: 100,
+              messages: [{ role: 'user', content: 'Say hello in Bengali (বাংলায় হ্যালো বলুন)' }]
+            })
+          });
+          const data = await resp.json();
+          return successResponse({ reply: data.choices?.[0]?.message?.content || JSON.stringify(data) });
+        } else {
+          return successResponse({ reply: 'বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন সক্রিয় ও প্রস্তুত আছে!' });
+        }
+      } catch (err) {
+        return errorResponse(err.message, 'AI_TEST_FAILED', 500);
+      }
     }
 
     if (path === '/api/dashboard/stats' && method === 'GET') {
@@ -512,243 +923,3 @@ export default {
     }
   }
 };
-
-// Web Crypto Helpers
-async function hashPassword(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial,
-    256
-  );
-  const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return 'pbkdf2$' + saltHex + '$' + hashHex;
-}
-
-async function verifyPassword(password, storedHash) {
-  try {
-    const parts = storedHash.split('$');
-    if (parts.length !== 3 || parts[0] !== 'pbkdf2') return false;
-    const saltHex = parts[1];
-    const targetHashHex = parts[2];
-    const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
-    );
-    const bits = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-      keyMaterial,
-      256
-    );
-    const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex === targetHashHex;
-  } catch (e) {
-    return false;
-  }
-}
-
-function generateToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function jsonResponse(data, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret',
-      ...extraHeaders
-    }
-  });
-}
-
-function errorResponse(message, code = 'BAD_REQUEST', status = 400) {
-  return jsonResponse({ success: false, error: { code, message } }, status);
-}
-
-function successResponse(data, status = 200, extraHeaders = {}) {
-  return jsonResponse({ success: true, data }, status, extraHeaders);
-}
-
-async function getAuthUser(request, env) {
-  const authHeader = request.headers.get('Authorization');
-  let token = null;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7).trim();
-  } else {
-    const cookie = request.headers.get('Cookie');
-    if (cookie) {
-      const match = cookie.match(/ac_session=([a-f0-9]+)/);
-      if (match) token = match[1];
-    }
-  }
-  if (!token) return null;
-
-  const session = await env.DB.prepare(
-    'SELECT s.*, u.email, u.name, u.role, u.active FROM sessions s JOIN admin_users u ON s.admin_id = u.id WHERE s.id = ? AND s.expires_at > datetime("now")'
-  ).bind(token).first();
-
-  if (!session || !session.active) return null;
-  return session;
-}
-
-async function logAudit(env, adminId, action, tableName, recordId, changes, ip = '') {
-  try {
-    await env.DB.prepare(
-      'INSERT INTO audit_logs (admin_id, action, table_name, record_id, changes, ip_hash) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(adminId, action, tableName, recordId, typeof changes === 'string' ? changes : JSON.stringify(changes), ip).run();
-  } catch (err) {
-    console.error('Audit log failed:', err);
-  }
-}
-
-async function sendWhatsAppMessage(env, phone, text) {
-  if (!env.EVOLUTION_API_URL || !env.EVOLUTION_API_KEY || !env.EVOLUTION_INSTANCE) {
-    console.warn('Evolution API not fully configured. Simulating send message.');
-    return { simulated: true, success: true };
-  }
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  const url = `${env.EVOLUTION_API_URL.replace(/\/$/, '')}/message/sendText/${env.EVOLUTION_INSTANCE}`;
-  
-  const payload = {
-    number: cleanPhone,
-    options: { delay: 1200, presence: 'composing', linkPreview: false },
-    textMessage: { text }
-  };
-
-  try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': env.EVOLUTION_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-    const result = await resp.json();
-    return { success: resp.ok, result };
-  } catch (err) {
-    console.error('Error sending WhatsApp message via Evolution API:', err);
-    return { success: false, error: err.message };
-  }
-}
-
-async function processWithAI(env, customer, incomingText, recentMessages) {
-  const promptRow = await env.DB.prepare("SELECT value FROM bot_flow_config WHERE key = 'system_prompt'").first();
-  const systemPrompt = promptRow ? promptRow.value : 'আপনি "এসি কেয়ার টিম"-এর একজন পেশাদার WhatsApp AC service assistant।';
-
-  const history = recentMessages.map(m => ({
-    role: m.sender === 'customer' ? 'user' : 'assistant',
-    content: m.text || ''
-  }));
-  history.push({ role: 'user', content: incomingText });
-
-  const aiInstructions = `${systemPrompt}\n\nCURRENT CUSTOMER CONTEXT:\n- Customer ID: ${customer.id}\n- Name: ${customer.name || 'অজানা'}\n- Phone: ${customer.phone}\n- Saved Address: ${customer.address || 'নথিভুক্ত নেই'}\n- Status: ${customer.status}\n\nSTRICT JSON OUTPUT REQUIREMENT:\nYou must reply ONLY in raw valid JSON format matching this schema:\n{\n  "reply": "বাংলা ভাষায় গ্রাহকের জন্য বন্ধুত্বপূর্ণ উত্তর",\n  "intent": "general_query" | "service_request" | "inquiry" | "handover",\n  "state": "collecting_info" | "ready_to_create" | "completed",\n  "customer_update": {\n    "name": "optional updated name",\n    "address": "optional updated address"\n  },\n  "tool_call": null or {\n    "name": "create_service_request",\n    "arguments": {\n      "issue_description": "এসির সমস্যার বর্ণনা",\n      "address": "সার্ভিসের ঠিকানা",\n      "preferred_date": "সুবিধাজনক তারিখ (optional)",\n      "preferred_time": "সুবিধাজনক সময় (optional)"\n    }\n  } or {\n    "name": "handover_to_human",\n    "arguments": {\n      "reason": "Customer requested human or emergency"\n    }\n  }\n}\nCRITICAL RULES:\n1. Never guess technician availability, price, or exact arrival time.\n2. If customer gives their address and issue, you can trigger create_service_request tool_call.\n3. Do NOT include markdown code blocks like \`\`\`json. Output raw JSON only.`;
-
-  if (env.AI_API_KEY && (env.AI_PROVIDER === 'anthropic' || env.AI_PROVIDER === 'openai')) {
-    try {
-      if (env.AI_PROVIDER === 'anthropic') {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': env.AI_API_KEY,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: env.AI_MODEL || 'claude-3-5-sonnet-20241022',
-            max_tokens: 800,
-            system: aiInstructions,
-            messages: history
-          })
-        });
-        const data = await resp.json();
-        if (data.content && data.content[0] && data.content[0].text) {
-          const rawText = data.content[0].text.trim().replace(/^```json/, '').replace(/```$/, '').trim();
-          return JSON.parse(rawText);
-        }
-      } else if (env.AI_PROVIDER === 'openai') {
-        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.AI_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: env.AI_MODEL || 'gpt-4o-mini',
-            response_format: { type: 'json_object' },
-            messages: [
-              { role: 'system', content: aiInstructions },
-              ...history
-            ]
-          })
-        });
-        const data = await resp.json();
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-          return JSON.parse(data.choices[0].message.content);
-        }
-      }
-    } catch (err) {
-      console.error('AI provider call failed:', err);
-    }
-  }
-
-  const lower = incomingText.toLowerCase();
-  if (lower.includes('মানুষ') || lower.includes('agent') || lower.includes('কথা বলব') || lower.includes('জরুরি') || lower.includes('human')) {
-    return {
-      reply: 'আপনার অনুরোধটি আমাদের স্পেশালিস্ট টিমের কাছে স্থানান্তর করা হয়েছে। একজন দক্ষ প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন।',
-      intent: 'handover',
-      state: 'completed',
-      customer_update: {},
-      tool_call: { name: 'handover_to_human', arguments: { reason: 'User requested human agent' } }
-    };
-  }
-
-  const isAddressGiven = customer.address || lower.includes('রোড') || lower.includes('বাসা') || lower.includes('গ্রাম') || lower.includes('জেলা') || lower.includes('street') || lower.includes('house');
-  const isIssueGiven = lower.includes('ঠান্ডা') || lower.includes('পানি') || lower.includes('শব্দ') || lower.includes('গ্যাস') || lower.includes('কুলিং') || lower.includes('লিক') || lower.includes('ac') || lower.includes('সার্ভিস');
-
-  if (isIssueGiven && isAddressGiven) {
-    return {
-      reply: 'ধন্যবাদ! আপনার সমস্যা ও ঠিকানার তথ্য পেয়েছি। সার্ভিস রিকোয়েস্ট তৈরি করা হচ্ছে। আমাদের প্রতিনিধি শীঘ্রই সময় চূড়ান্ত করতে যোগাযোগ করবেন।',
-      intent: 'service_request',
-      state: 'ready_to_create',
-      customer_update: !customer.address ? { address: incomingText } : {},
-      tool_call: {
-        name: 'create_service_request',
-        arguments: {
-          issue_description: incomingText,
-          address: customer.address || incomingText,
-          preferred_date: 'যেকোনো সময়',
-          preferred_time: 'সকাল/বিকাল'
-        }
-      }
-    };
-  }
-
-  if (isIssueGiven && !customer.address) {
-    return {
-      reply: 'আপনার এসির সমস্যাটি বুঝতে পেরেছি। সার্ভিসিংয়ের জন্য অনুগ্রহ করে আপনার সম্পূর্ণ ঠিকানা এবং সুবিধাজনক সময়টি লিখে পাঠান।',
-      intent: 'service_request',
-      state: 'collecting_info',
-      customer_update: {},
-      tool_call: null
-    };
-  }
-
-  return {
-    reply: 'আসসালামু আলাইকুম! এসি কেয়ার টিমে স্বাগতম। আপনার এসিতে কী ধরনের সমস্যা হচ্ছে (যেমন: ঠান্ডা না হওয়া, পানি পড়া, গ্যাস রিফিল) তা দয়া করে বিস্তারিত জানাবেন কি?',
-    intent: 'general_query',
-    state: 'collecting_info',
-    customer_update: {},
-    tool_call: null
-  };
-}
