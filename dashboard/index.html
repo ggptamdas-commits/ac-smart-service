@@ -14,7 +14,7 @@
     .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .scrollbar-none::-webkit-scrollbar { display: none; }
     .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
-  </style></head><body class="h-full flex flex-col text-slate-800"><div id="app" class="h-full flex flex-col"><header class="bg-slate-900 text-white border-b border-slate-800/80 sticky top-0 z-40 shadow-md"><div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between"><div class="flex items-center space-x-2.5 min-w-0"><div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-bold text-base shadow-sm shrink-0"> ❄️ </div><div class="min-w-0"><div class="flex items-center space-x-1.5"><h1 class="font-bold text-sm sm:text-base tracking-tight text-white truncate" id="brandTitle">AC Smart Service</h1><span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">v2.0</span></div><p class="text-[10px] text-slate-400 truncate hidden sm:block">WhatsApp AI Hub • صبيا (Sabya), KSA</p></div></div><div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0"><div class="hidden md:flex items-center text-[11px] text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span><span>Asia/Riyadh</span></div><button onclick="switchTab('settings')" title="Settings & API Hub" class="p-1.5 sm:px-2.5 sm:py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition font-medium flex items-center gap-1"><span>⚙️</span><span class="hidden sm:inline text-[11px]">সেটিংস</span></button><button id="logoutBtn" onclick="appLogout()" class="px-2.5 py-1 text-xs bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg transition font-medium">লগআউট</button></div></div></header><nav class="bg-white border-b border-slate-200 shrink-0 shadow-sm"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex space-x-2 sm:space-x-6 overflow-x-auto py-2 text-sm font-medium scrollbar-none"><button onclick="switchTab('overview')" id="tab-overview" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-blue-600 bg-blue-50 shrink-0"><span>📊</span><span>ওভারভিউ</span></button><button onclick="switchTab('conversations')" id="tab-conversations" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>💬</span><span>কথোপকথন (WhatsApp)</span><span id="badgeActiveChats" class="hidden ml-1 px-1.5 py-0.5 text-xs bg-emerald-500 text-white rounded-full">0</span></button><button onclick="switchTab('requests')" id="tab-requests" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>📋</span><span>সার্ভিস রিকোয়েস্ট (Kanban)</span><span id="badgePendingReqs" class="hidden ml-1 px-1.5 py-0.5 text-xs bg-amber-500 text-white rounded-full">0</span></button><button onclick="switchTab('customers')" id="tab-customers" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>👥</span><span>গ্রাহক তালিকা</span></button><button onclick="switchTab('reminders')" id="tab-reminders" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>⏰</span><span>সার্ভিস রিমাইন্ডার</span></button><button onclick="switchTab('botconfig')" id="tab-botconfig" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>🤖</span><span>বট কনফিগ ও প্রম্পট</span></button><button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 font-bold border border-slate-200 bg-slate-50 shrink-0"><span>⚙️</span><span>সেটিংস ও এপিআই হাব</span></button></div></div></nav><main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto"><section id="view-overview" class="space-y-6"><div class="grid grid-cols-2 lg:grid-cols-6 gap-4"><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">মোট গ্রাহক</p><h3 id="statTotalCustomers" class="text-2xl font-bold text-slate-900 mt-1">0</h3><span class="text-xs text-emerald-600 mt-1 block">নিবন্ধিত ডাটাবেস</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">সক্রিয় চ্যাট</p><h3 id="statActiveConversations" class="text-2xl font-bold text-emerald-600 mt-1">0</h3><span class="text-xs text-slate-500 mt-1 block">লাইভ হোয়াটসঅ্যাপ</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">পেন্ডিং রিকোয়েস্ট</p><h3 id="statPendingRequests" class="text-2xl font-bold text-amber-600 mt-1">0</h3><span class="text-xs text-amber-600 mt-1 block">কার্যক্রম প্রয়োজন</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">শিডিউল রিকোয়েস্ট</p><h3 id="statScheduledRequests" class="text-2xl font-bold text-blue-600 mt-1">0</h3><span class="text-xs text-blue-600 mt-1 block">তারিখ চূড়ান্ত</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">আজ সম্পন্ন</p><h3 id="statCompletedToday" class="text-2xl font-bold text-emerald-700 mt-1">0</h3><span class="text-xs text-emerald-600 mt-1 block">সফল ডেলিভারি</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">বাকি রিমাইন্ডার</p><h3 id="statRemindersDue" class="text-2xl font-bold text-purple-600 mt-1">0</h3><span class="text-xs text-purple-600 mt-1 block">নির্ধারিত দিন পূর্ণ</span></div></div><div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><h3 class="text-xl font-bold">এসি সার্ভিস অটোমেশন ও টেকনিশিয়ান হাব</h3><p class="text-sm text-blue-200 mt-1"> হোয়াটসঅ্যাপ এআই বট গ্রাহকের কাছ থেকে সমস্যা ও ঠিকানা সংগ্রহ করছে এবং ড্যাশবোর্ড থেকে তাৎক্ষণিক টেকনিশিয়ান অ্যাসাইন ও রিমাইন্ডার পরিচালনা করা যাচ্ছে। </p></div><div class="flex gap-3"><button onclick="switchTab('conversations')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl text-sm transition shadow"> 💬 লাইভ চ্যাটে যান </button><button onclick="switchTab('settings')" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-sm transition border border-white/20"> ⚙️ এপিআই ও ওয়েবহুক সেটআপ </button></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-800 flex items-center space-x-2"><span>📋</span><span>সাম্প্রতিক সার্ভিস রিকোয়েস্ট</span></h4><button onclick="switchTab('requests')" class="text-xs text-blue-600 hover:underline">সবগুলো দেখুন →</button></div><div id="overviewRecentRequests" class="space-y-3"><p class="text-xs text-slate-400 py-4 text-center">লোড হচ্ছে...</p></div></div><div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-800 flex items-center space-x-2"><span>⏰</span><span>শিডিউল রিমাইন্ডার ও অ্যাকশন</span></h4><button onclick="triggerRemindersNow()" class="text-xs px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition"> এখনই প্রসেস করুন ⚡ </button></div><div id="overviewRemindersList" class="space-y-3"><p class="text-xs text-slate-400 py-4 text-center">লোড হচ্ছে...</p></div></div></div></section><section id="view-conversations" class="hidden h-[calc(100vh-12rem)] flex flex-col md:flex-row bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><div class="w-full md:w-80 border-r border-slate-200 flex flex-col shrink-0 bg-slate-50/50"><div class="p-3 border-b border-slate-200 bg-white"><input type="text" id="chatSearchInput" oninput="filterChatCustomers()" placeholder="গ্রাহক খুঁজুন (নাম/ফোন)..." class="w-full px-3 py-2 text-sm bg-slate-100 rounded-lg border border-transparent focus:border-blue-500 focus:bg-white focus:outline-none transition"></div><div id="conversationCustomerList" class="flex-1 overflow-y-auto divide-y divide-slate-100 chat-scroll"><p class="text-xs text-slate-400 p-4 text-center">গ্রাহক লোড হচ্ছে...</p></div></div><div class="flex-1 flex flex-col bg-slate-100 relative"><div id="chatWindowHeader" class="h-16 px-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0"><div class="flex items-center space-x-3"><div id="activeChatAvatar" class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">?</div><div><h4 id="activeChatName" class="font-bold text-sm text-slate-900">গ্রাহক নির্বাচন করুন</h4><p id="activeChatPhone" class="text-xs text-slate-500">-</p></div></div><div id="activeChatControls" class="hidden flex items-center space-x-2"><span id="activeChatBotStatus" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">AI সক্রিয়</span><button id="btnTakeover" onclick="toggleHumanTakeover()" class="px-3 py-1 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition"> হ্যান্ডওভার নিন </button></div></div><div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 chat-scroll"><div class="flex items-center justify-center h-full text-slate-400 text-sm"> বামদিকের তালিকা থেকে যেকোনো গ্রাহকের চ্যাট সিলেক্ট করুন </div></div><div id="chatInputArea" class="p-3 bg-white border-t border-slate-200 flex items-center space-x-2 shrink-0"><input type="text" id="adminReplyText" onkeydown="if(event.key==='Enter') sendAdminReply()\" placeholder="এখানে অ্যাডমিন মেসেজ লিখুন (হোয়াটসঅ্যাপে যাবে)..." class="flex-1 px-4 py-2.5 text-sm bg-slate-100 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition" disabled><button id="btnSendReply" onclick="sendAdminReply()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition disabled:opacity-50" disabled> পাঠান 🚀 </button></div></div><div id="chatRightPanel" class="w-full md:w-72 border-l border-slate-200 p-4 bg-white flex flex-col shrink-0 overflow-y-auto chat-scroll hidden md:flex"><h4 class="font-bold text-xs uppercase tracking-wider text-slate-500 mb-3">গ্রাহকের প্রোফাইল</h4><div id="chatProfileDetails" class="space-y-4 text-xs"><p class="text-slate-400">কোনো গ্রাহক নির্বাচিত নেই</p></div></div></section><section id="view-requests" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">সার্ভিস রিকোয়েস্ট কানবান বোর্ড</h3><p class="text-xs text-slate-500">গ্রাহকের এসি সার্ভিস কার্যক্রমের সর্বশেষ অবস্থা ট্র্যাক ও পরিচালনা করুন</p></div></div><div class="grid grid-cols-1 md:grid-cols-5 gap-4"><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-amber-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> পেন্ডিং </span><span id="colCountPending" class="text-xs bg-amber-200/60 text-amber-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanPending" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-blue-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> শিডিউলড </span><span id="colCountScheduled" class="text-xs bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanScheduled" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-purple-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span> চলমান </span><span id="colCountInProgress" class="text-xs bg-purple-200/60 text-purple-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanInProgress" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-emerald-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> সম্পন্ন </span><span id="colCountCompleted" class="text-xs bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanCompleted" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-rose-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> বাতিল </span><span id="colCountCancelled" class="text-xs bg-rose-200/60 text-rose-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanCancelled" class="space-y-2.5 flex-1 overflow-y-auto"></div></div></div></section><section id="view-customers" class="hidden space-y-4"><div class="flex justify-between items-center"><h3 class="text-lg font-bold text-slate-900">গ্রাহক তালিকা ও বিবরণ</h3></div><div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"><div class="p-4 border-b border-slate-200 flex justify-between gap-4"><input type="text" id="customerTableSearch" oninput="loadCustomers()" placeholder="নাম বা ফোন নম্বর দিয়ে ফিল্টার করুন..." class="w-72 px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"><select id="customerStatusFilter" onchange="loadCustomers()" class="px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none"><option value="">সকল স্ট্যাটাস</option><option value="new">নতুন (New)</option><option value="in_progress">চলমান (In Progress)</option><option value="completed">সম্পন্ন (Completed)</option><option value="inactive">নিষ্ক্রিয় (Inactive)</option></select></div><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold"><tr><th class="p-3.5">আইডি</th><th class="p-3.5">নাম</th><th class="p-3.5">ফোন</th><th class="p-3.5">ঠিকানা</th><th class="p-3.5">স্ট্যাটাস</th><th class="p-3.5">বট স্ট্যাটাস</th><th class="p-3.5">সর্বশেষ সার্ভিস</th><th class="p-3.5">পরবর্তী রিমাইন্ডার</th><th class="p-3.5 text-right">অ্যাকশন</th></tr></thead><tbody id="customerTableBody" class="divide-y divide-slate-100"><tr><td colspan="9" class="p-6 text-center text-slate-400">গ্রাহক তালিকা লোড হচ্ছে...</td></tr></tbody></table></div></section><section id="view-reminders" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">স্বয়ংক্রিয় সার্ভিস রিমাইন্ডার ইঞ্জিন</h3><p class="text-xs text-slate-500">গ্রাহকের সার্ভিসিংয়ের পর নির্দিষ্ট দিন পর স্বয়ংক্রিয় হোয়াটসঅ্যাপ বার্তা পাঠাবে</p></div><button onclick="triggerRemindersNow()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl transition shadow"> ⚡ রিমাইন্ডার রান করুন </button></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-800">রিমাইন্ডার সেটিংস</h4><div><label class="block text-xs font-medium text-slate-600 mb-1">রিমাইন্ডারের নাম</label><input type="text" id="remSettingName" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg"></div><div><label class="block text-xs font-medium text-slate-600 mb-1">কত দিন পর পর (Interval Days)</label><input type="number" id="remSettingDays" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" value="90"></div><div><label class="block text-xs font-medium text-slate-600 mb-1">মেসেজ টেমপ্লেট</label><textarea id="remSettingTemplate" rows="6" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg font-mono"></textarea><p class="text-[10px] text-slate-400 mt-1">ব্যবহারযোগ্য ভেরিয়েবল: {{customer_name}}, {{days_since}}</p></div><button onclick="saveReminderSetting()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"> সংরক্ষণ করুন </button></div><div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-800">রিমাইন্ডার হিস্ট্রি ও লগস</h4><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold"><tr><th class="p-2.5">লগ আইডি</th><th class="p-2.5">গ্রাহক</th><th class="p-2.5">নির্ধারিত তারিখ</th><th class="p-2.5">প্রেরণের সময়</th><th class="p-2.5">স্ট্যাটাস</th></tr></thead><tbody id="reminderLogsBody" class="divide-y divide-slate-100"><tr><td colspan="5" class="p-4 text-center text-slate-400">লগ লোড হচ্ছে...</td></tr></tbody></table></div></div></div></section><section id="view-botconfig" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">হোয়াটসঅ্যাপ এআই বট কনফিগারেশন</h3><p class="text-xs text-slate-500">বটের সিস্টেম প্রম্পট ও রেসপন্স বার্তা কোড পরিবর্তন ছাড়াই ড্যাশবোর্ড থেকে এডিট করুন</p></div><button onclick="saveAllBotConfigs()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition shadow"> 💾 সব সেভ করুন </button></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5"><div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"> প্রধান এআই সিস্টেম প্রম্পট (System Prompt) </label><textarea id="cfg_system_prompt" rows="8" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500"></textarea></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-xs font-bold text-slate-700 mb-1">প্রথম সম্ভাষণ বার্তা (Initial Greeting)</label><textarea id="cfg_initial_greeting" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">ঠিকানা চাওয়ার বার্তা (Address Question)</label><textarea id="cfg_address_question" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">সমস্যা জানার বার্তা (Issue Question)</label><textarea id="cfg_issue_question" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">রিকোয়েস্ট নিশ্চিতকরণ বার্তা (Confirmation Message)</label><textarea id="cfg_confirmation_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">হ্যান্ডওভার বার্তা (Handover Message)</label><textarea id="cfg_handover_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">সাধারণ রিমাইন্ডার বার্তা (Reminder Message)</label><textarea id="cfg_reminder_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div></div></div></section><section id="view-settings" class="space-y-6"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4"><div><h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><span>⚙️</span><span>সেটিংস ও এপিআই কনফিগারেশন হাব</span></h3><p class="text-xs text-slate-500 mt-1"> কোড পরিবর্তন ছাড়াই এখান থেকে Evolution API, AI প্রোভাইডার, ওয়েবহুক এবং বিজনেস সেটিংস পরিচালনা করুন। </p></div><button onclick="saveAllSettings()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-2"><span>💾</span><span>সব সেটিংস সংরক্ষণ করুন</span></button></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><div class="flex items-center justify-between border-b border-slate-100 pb-3"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-emerald-600 text-lg">📱</span><span>Evolution WhatsApp API সেটিংস</span></h4><button onclick="testEvolutionConnection()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold rounded-lg transition border border-emerald-200"> 🔌 কানেকশন টেস্ট </button></div><div class="space-y-3 text-xs"><div><label class="block font-semibold text-slate-700 mb-1">Evolution API Server URL</label><input type="url" id="setting_EVOLUTION_API_URL" placeholder="যেমন: https://evolution.yourdomain.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"><span class="text-[10px] text-slate-400">যে ইউআরএল-এ আপনার Evolution API ইনস্ট্যান্স চলছে</span></div><div><label class="block font-semibold text-slate-700 mb-1">Evolution API Key</label><input type="password" id="setting_EVOLUTION_API_KEY" placeholder="আপনার Evolution Global বা Instance API Key" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">Instance Name</label><input type="text" id="setting_EVOLUTION_INSTANCE" placeholder="যেমন: ac-care বা my-bot" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div><div><label class="block font-semibold text-slate-700 mb-1">Webhook Secret (ঐচ্ছিক)</label><input type="password" id="setting_WEBHOOK_SECRET" placeholder="সিকিউর ওয়েবহুক টোকেন" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><div class="flex items-center justify-between border-b border-slate-100 pb-3"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-purple-600 text-lg">🤖</span><span>AI ইঞ্জিন ও প্রোভাইডার সেটিংস</span></h4><button onclick="testAiConnection()" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-semibold rounded-lg transition border border-purple-200"> ⚡ এআই টেস্ট </button></div><div class="space-y-3 text-xs"><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">AI Provider</label><select id="setting_AI_PROVIDER" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"><option value="anthropic">Anthropic Claude</option><option value="openai">OpenAI (ChatGPT)</option><option value="fallback">বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন</option></select></div><div><label class="block font-semibold text-slate-700 mb-1">AI Model Name</label><input type="text" id="setting_AI_MODEL" placeholder="claude-3-5-sonnet-20241022 বা gpt-4o-mini" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div></div><div><label class="block font-semibold text-slate-700 mb-1">AI API Key</label><input type="password" id="setting_AI_API_KEY" placeholder="sk-ant-... অথবা sk-...\" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"><span class="text-[10px] text-slate-400">এপিআই কি ডাটাবেসে সুরক্ষিতভাবে সংরক্ষিত থাকে</span></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">টাইমজোন (Timezone)</label><input type="text" id="setting_BUSINESS_TIMEZONE" value="Asia/Riyadh" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none font-mono text-xs"></div><div><label class="block font-semibold text-slate-700 mb-1">মুদ্রা (Currency)</label><input type="text" id="setting_CURRENCY" value="SAR (রিয়াল)" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none text-xs"></div></div></div></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-blue-600 text-lg">🔗</span><span>লাইভ হোয়াটসঅ্যাপ ওয়েবহুক নির্দেশিকা</span></h4><div class="text-xs space-y-3 text-slate-600"><p>আপনার Evolution API ড্যাশবোর্ডে গিয়ে নিচের Webhook URL টি বসিয়ে দিন:</p><div class="flex items-center gap-2"><input type="text" id="liveWebhookUrl" readonly value="https://ac-smart-service.virallink.workers.dev/webhook/messages" class="flex-1 p-2.5 bg-slate-100 rounded-xl font-mono text-blue-700 border border-slate-200 select-all text-xs"><button onclick="copyWebhookUrl()" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium transition shrink-0"> 📋 কপি </button></div><div class="p-3 bg-blue-50 text-blue-900 rounded-xl space-y-1 text-[11px] border border-blue-100"><p><strong>প্রয়োজনীয় সেটিংস:</strong></p><ul class="list-disc list-inside space-y-0.5"><li>Webhook Events: <code class="bg-white px-1 py-0.5 rounded font-mono">MESSAGES_UPSERT</code></li><li>Method: <code class="bg-white px-1 py-0.5 rounded font-mono">POST</code></li><li>Deduplication & Idempotency: <strong>স্বয়ংক্রিয়ভাবে সক্রিয়</strong></li></ul></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-amber-500 text-lg">🧪</span><span>ড্যাশবোর্ড মেসেজ সিমুলেটর (টেস্ট করুন)</span></h4><p class="text-xs text-slate-500"> Evolution API ছাড়াও সরাসরি ড্যাশবোর্ড থেকে একটি কৃত্রিম গ্রাহক বার্তা পাঠিয়ে বট রেসপন্স ও অটো-রিকোয়েস্ট তৈরি যাচাই করুন: </p><div class="space-y-3 text-xs"><div class="grid grid-cols-2 gap-2"><input type="text" id="simPhone" placeholder="ফোন নম্বর (যেমন 966500000000)" value="966501234567" class="p-2 border border-slate-300 rounded-lg font-mono"><input type="text" id="simName" placeholder="গ্রাহকের নাম" value="আহমেদ সাবি" class="p-2 border border-slate-300 rounded-lg"></div><textarea id="simMessage" rows="2" placeholder="গ্রাহকের মেসেজ (যেমন: আমার এসিতে গ্যাস লিক করছে, صবيا বাজার রোড)" class="w-full p-2 border border-slate-300 rounded-lg">আমার ২টা এসি ঠান্ডা করছে না, ঠিকানা: صবিয়া রোড নম্বর ৪</textarea><button onclick="runWebhookSimulation()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition shadow"> 🚀 মেসেজ সিমুলেট করুন ও এআই রেসপন্স দেখুন </button><div id="simResultBox" class="hidden p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 font-mono text-[11px]"></div></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3"><h4 class="font-bold text-sm text-slate-900">📜 সিস্টেম অডিট ট্রেইল ও অ্যাডমিন অ্যাকশন হিস্ট্রি</h4><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold"><tr><th class="p-2.5">আইডি</th><th class="p-2.5">অ্যাকশন</th><th class="p-2.5">টেবিল</th><th class="p-2.5">রেকর্ড আইডি</th><th class="p-2.5">পরিবর্তন (Changes)</th><th class="p-2.5">সময়</th></tr></thead><tbody id="auditTableBody" class="divide-y divide-slate-100"><tr><td colspan="6" class="p-4 text-center text-slate-400">অডিট লগ লোড হচ্ছে...</td></tr></tbody></table></div></div></section></main><div id="requestModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"><div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center border-b border-slate-200 pb-3"><h3 id="reqModalTitle" class="font-bold text-base text-slate-900">সার্ভিস রিকোয়েস্ট পরিচালনা</h3><button onclick="closeRequestModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button></div><form id="reqModalForm" onsubmit="submitRequestUpdate(event)" class="space-y-3 text-xs"><input type="hidden" id="reqModalId"><div><label class="block font-medium text-slate-700 mb-1">গ্রাহকের নাম ও ফোন</label><input type="text" id="reqModalCustomer" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg" readonly></div><div><label class="block font-medium text-slate-700 mb-1">সমস্যার বর্ণনা</label><textarea id="reqModalIssue" rows="2" class="w-full p-2 border border-slate-300 rounded-lg"></textarea></div><div><label class="block font-medium text-slate-700 mb-1">সার্ভিস ঠিকানা</label><input type="text" id="reqModalAddress" class="w-full p-2 border border-slate-300 rounded-lg"></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">স্ট্যাটাস</label><select id="reqModalStatus" class="w-full p-2 border border-slate-300 rounded-lg font-medium"><option value="pending">পেন্ডিং (Pending)</option><option value="scheduled">শিডিউলড (Scheduled)</option><option value="in_progress">চলমান (In Progress)</option><option value="completed">সম্পন্ন (Completed)</option><option value="cancelled">বাতিল (Cancelled)</option></select></div><div><label class="block font-medium text-slate-700 mb-1">নির্ধারিত টেকনিশিয়ান</label><input type="text" id="reqModalTechnician" placeholder="টেকনিশিয়ানের নাম..." class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">শিডিউল তারিখ</label><input type="date" id="reqModalDate" class="w-full p-2 border border-slate-300 rounded-lg"></div><div><label class="block font-medium text-slate-700 mb-1">শিডিউল সময়</label><input type="text" id="reqModalTime" placeholder="যেমন: সকাল ১০টা" class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">আনুমানিক খরচ (SAR)</label><input type="number" id="reqModalCostEst" class="w-full p-2 border border-slate-300 rounded-lg"></div><div><label class="block font-medium text-slate-700 mb-1">চূড়ান্ত খরচ (SAR)</label><input type="number" id="reqModalCostFinal" class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="flex justify-end space-x-2 pt-3 border-t border-slate-200"><button type="button" onclick="closeRequestModal()" class="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 font-medium">বন্ধ করুন</button><button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow">আপডেট করুন</button></div></form></div></div><div id="loginModal" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4"><div class="bg-white rounded-3xl max-w-md w-full p-8 space-y-6 shadow-2xl border border-slate-100"><div class="text-center"><div class="w-16 h-16 rounded-2xl bg-blue-600 text-white text-3xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 mb-3"> ❄️ </div><h2 class="text-2xl font-bold text-slate-900">অ্যাডমিন লগইন</h2><p class="text-xs text-slate-500 mt-1">AC Smart Service Management Dashboard</p></div><form onsubmit="appLogin(event)" class="space-y-4 text-xs"><div id="loginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl"></div><div><label class="block font-semibold text-slate-700 mb-1">ইমেইল</label><input type="email" id="loginEmail" placeholder="admin@example.com" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500"></div><div><label class="block font-semibold text-slate-700 mb-1">পাসওয়ার্ড</label><input type="password" id="loginPassword" placeholder="••••••••" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500"></div><button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition"> লগইন করুন </button></form></div></div></div><script>
+  </style></head><body class="h-full flex flex-col text-slate-800"><div id="app" class="h-full flex flex-col"><header class="bg-slate-900 text-white border-b border-slate-800/80 sticky top-0 z-40 shadow-md"><div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between"><div class="flex items-center space-x-2.5 min-w-0"><div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-bold text-base shadow-sm shrink-0"> ❄️ </div><div class="min-w-0"><div class="flex items-center space-x-1.5"><h1 class="font-bold text-sm sm:text-base tracking-tight text-white truncate" id="brandTitle">AC Smart Service</h1><span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">v2.0</span></div><p class="text-[10px] text-slate-400 truncate hidden sm:block">WhatsApp AI Hub • صبيا (Sabya), KSA</p></div></div><div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0"><div class="hidden md:flex items-center text-[11px] text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span><span>Asia/Riyadh</span></div><button onclick="switchTab('settings')" title="Settings & API Hub" class="p-1.5 sm:px-2.5 sm:py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition font-medium flex items-center gap-1"><span>⚙️</span><span class="hidden sm:inline text-[11px]">সেটিংস</span></button><button id="logoutBtn" onclick="appLogout()" class="px-2.5 py-1 text-xs bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg transition font-medium">লগআউট</button></div></div></header><nav class="bg-white border-b border-slate-200 shrink-0 shadow-sm"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex space-x-2 sm:space-x-6 overflow-x-auto py-2 text-sm font-medium scrollbar-none"><button onclick="switchTab('overview')" id="tab-overview" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-blue-600 bg-blue-50 shrink-0"><span>📊</span><span>ওভারভিউ</span></button><button onclick="switchTab('conversations')" id="tab-conversations" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>💬</span><span>কথোপকথন (WhatsApp)</span><span id="badgeActiveChats" class="hidden ml-1 px-1.5 py-0.5 text-xs bg-emerald-500 text-white rounded-full">0</span></button><button onclick="switchTab('requests')" id="tab-requests" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>📋</span><span>সার্ভিস রিকোয়েস্ট (Kanban)</span><span id="badgePendingReqs" class="hidden ml-1 px-1.5 py-0.5 text-xs bg-amber-500 text-white rounded-full">0</span></button><button onclick="switchTab('customers')" id="tab-customers" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>👥</span><span>গ্রাহক তালিকা</span></button><button onclick="switchTab('reminders')" id="tab-reminders" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>⏰</span><span>সার্ভিস রিমাইন্ডার</span></button><button onclick="switchTab('botconfig')" id="tab-botconfig" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0"><span>🤖</span><span>বট কনফিগ ও প্রম্পট</span></button><button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 font-bold border border-slate-200 bg-slate-50 shrink-0"><span>⚙️</span><span>সেটিংস ও এপিআই হাব</span></button></div></div></nav><main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto"><section id="view-overview" class="space-y-6"><div class="grid grid-cols-2 lg:grid-cols-6 gap-4"><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">মোট গ্রাহক</p><h3 id="statTotalCustomers" class="text-2xl font-bold text-slate-900 mt-1">0</h3><span class="text-xs text-emerald-600 mt-1 block">নিবন্ধিত ডাটাবেস</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">সক্রিয় চ্যাট</p><h3 id="statActiveConversations" class="text-2xl font-bold text-emerald-600 mt-1">0</h3><span class="text-xs text-slate-500 mt-1 block">লাইভ হোয়াটসঅ্যাপ</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">পেন্ডিং রিকোয়েস্ট</p><h3 id="statPendingRequests" class="text-2xl font-bold text-amber-600 mt-1">0</h3><span class="text-xs text-amber-600 mt-1 block">কার্যক্রম প্রয়োজন</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">শিডিউল রিকোয়েস্ট</p><h3 id="statScheduledRequests" class="text-2xl font-bold text-blue-600 mt-1">0</h3><span class="text-xs text-blue-600 mt-1 block">তারিখ চূড়ান্ত</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">আজ সম্পন্ন</p><h3 id="statCompletedToday" class="text-2xl font-bold text-emerald-700 mt-1">0</h3><span class="text-xs text-emerald-600 mt-1 block">সফল ডেলিভারি</span></div><div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"><p class="text-xs font-semibold uppercase text-slate-500">বাকি রিমাইন্ডার</p><h3 id="statRemindersDue" class="text-2xl font-bold text-purple-600 mt-1">0</h3><span class="text-xs text-purple-600 mt-1 block">নির্ধারিত দিন পূর্ণ</span></div></div><div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><h3 class="text-xl font-bold">এসি সার্ভিস অটোমেশন ও টেকনিশিয়ান হাব</h3><p class="text-sm text-blue-200 mt-1"> হোয়াটসঅ্যাপ এআই বট গ্রাহকের কাছ থেকে সমস্যা ও ঠিকানা সংগ্রহ করছে এবং ড্যাশবোর্ড থেকে তাৎক্ষণিক টেকনিশিয়ান অ্যাসাইন ও রিমাইন্ডার পরিচালনা করা যাচ্ছে। </p></div><div class="flex gap-3"><button onclick="switchTab('conversations')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl text-sm transition shadow"> 💬 লাইভ চ্যাটে যান </button><button onclick="switchTab('settings')" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-sm transition border border-white/20"> ⚙️ এপিআই ও ওয়েবহুক সেটআপ </button></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-800 flex items-center space-x-2"><span>📋</span><span>সাম্প্রতিক সার্ভিস রিকোয়েস্ট</span></h4><button onclick="switchTab('requests')" class="text-xs text-blue-600 hover:underline">সবগুলো দেখুন →</button></div><div id="overviewRecentRequests" class="space-y-3"><p class="text-xs text-slate-400 py-4 text-center">লোড হচ্ছে...</p></div></div><div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-800 flex items-center space-x-2"><span>⏰</span><span>শিডিউল রিমাইন্ডার ও অ্যাকশন</span></h4><button onclick="triggerRemindersNow()" class="text-xs px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition"> এখনই প্রসেস করুন ⚡ </button></div><div id="overviewRemindersList" class="space-y-3"><p class="text-xs text-slate-400 py-4 text-center">লোড হচ্ছে...</p></div></div></div></section><section id="view-conversations" class="hidden h-[calc(100vh-12rem)] flex flex-col md:flex-row bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><div class="w-full md:w-80 border-r border-slate-200 flex flex-col shrink-0 bg-slate-50/50"><div class="p-3 border-b border-slate-200 bg-white"><input type="text" id="chatSearchInput" oninput="filterChatCustomers()" placeholder="গ্রাহক খুঁজুন (নাম/ফোন)..." class="w-full px-3 py-2 text-sm bg-slate-100 rounded-lg border border-transparent focus:border-blue-500 focus:bg-white focus:outline-none transition"></div><div id="conversationCustomerList" class="flex-1 overflow-y-auto divide-y divide-slate-100 chat-scroll"><p class="text-xs text-slate-400 p-4 text-center">গ্রাহক লোড হচ্ছে...</p></div></div><div class="flex-1 flex flex-col bg-slate-100 relative"><div id="chatWindowHeader" class="h-16 px-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0"><div class="flex items-center space-x-3"><div id="activeChatAvatar" class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">?</div><div><h4 id="activeChatName" class="font-bold text-sm text-slate-900">গ্রাহক নির্বাচন করুন</h4><p id="activeChatPhone" class="text-xs text-slate-500">-</p></div></div><div id="activeChatControls" class="hidden flex items-center space-x-2"><span id="activeChatBotStatus" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">AI সক্রিয়</span><button id="btnTakeover" onclick="toggleHumanTakeover()" class="px-3 py-1 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition"> হ্যান্ডওভার নিন </button></div></div><div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 chat-scroll"><div class="flex items-center justify-center h-full text-slate-400 text-sm"> বামদিকের তালিকা থেকে যেকোনো গ্রাহকের চ্যাট সিলেক্ট করুন </div></div><div id="chatInputArea" class="p-3 bg-white border-t border-slate-200 flex items-center space-x-2 shrink-0"><input type="text" id="adminReplyText" onkeydown="if(event.key==='Enter') sendAdminReply()" placeholder="এখানে অ্যাডমিন মেসেজ লিখুন (হোয়াটসঅ্যাপে যাবে)..." class="flex-1 px-4 py-2.5 text-sm bg-slate-100 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition" disabled><button id="btnSendReply" onclick="sendAdminReply()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition disabled:opacity-50" disabled> পাঠান 🚀 </button></div></div><div id="chatRightPanel" class="w-full md:w-72 border-l border-slate-200 p-4 bg-white flex flex-col shrink-0 overflow-y-auto chat-scroll hidden md:flex"><h4 class="font-bold text-xs uppercase tracking-wider text-slate-500 mb-3">গ্রাহকের প্রোফাইল</h4><div id="chatProfileDetails" class="space-y-4 text-xs"><p class="text-slate-400">কোনো গ্রাহক নির্বাচিত নেই</p></div></div></section><section id="view-requests" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">সার্ভিস রিকোয়েস্ট কানবান বোর্ড</h3><p class="text-xs text-slate-500">গ্রাহকের এসি সার্ভিস কার্যক্রমের সর্বশেষ অবস্থা ট্র্যাক ও পরিচালনা করুন</p></div></div><div class="grid grid-cols-1 md:grid-cols-5 gap-4"><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-amber-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> পেন্ডিং </span><span id="colCountPending" class="text-xs bg-amber-200/60 text-amber-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanPending" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-blue-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> শিডিউলড </span><span id="colCountScheduled" class="text-xs bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanScheduled" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-purple-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span> চলমান </span><span id="colCountInProgress" class="text-xs bg-purple-200/60 text-purple-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanInProgress" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-emerald-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> সম্পন্ন </span><span id="colCountCompleted" class="text-xs bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanCompleted" class="space-y-2.5 flex-1 overflow-y-auto"></div></div><div class="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 flex flex-col"><div class="flex justify-between items-center mb-3 px-1"><span class="font-bold text-xs text-rose-700 uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> বাতিল </span><span id="colCountCancelled" class="text-xs bg-rose-200/60 text-rose-800 font-bold px-2 py-0.5 rounded-full">0</span></div><div id="kanbanCancelled" class="space-y-2.5 flex-1 overflow-y-auto"></div></div></div></section><section id="view-customers" class="hidden space-y-4"><div class="flex justify-between items-center"><h3 class="text-lg font-bold text-slate-900">গ্রাহক তালিকা ও বিবরণ</h3></div><div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"><div class="p-4 border-b border-slate-200 flex justify-between gap-4"><input type="text" id="customerTableSearch" oninput="loadCustomers()" placeholder="নাম বা ফোন নম্বর দিয়ে ফিল্টার করুন..." class="w-72 px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"><select id="customerStatusFilter" onchange="loadCustomers()" class="px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none"><option value="">সকল স্ট্যাটাস</option><option value="new">নতুন (New)</option><option value="in_progress">চলমান (In Progress)</option><option value="completed">সম্পন্ন (Completed)</option><option value="inactive">নিষ্ক্রিয় (Inactive)</option></select></div><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold"><tr><th class="p-3.5">আইডি</th><th class="p-3.5">নাম</th><th class="p-3.5">ফোন</th><th class="p-3.5">ঠিকানা</th><th class="p-3.5">স্ট্যাটাস</th><th class="p-3.5">বট স্ট্যাটাস</th><th class="p-3.5">সর্বশেষ সার্ভিস</th><th class="p-3.5">পরবর্তী রিমাইন্ডার</th><th class="p-3.5 text-right">অ্যাকশন</th></tr></thead><tbody id="customerTableBody" class="divide-y divide-slate-100"><tr><td colspan="9" class="p-6 text-center text-slate-400">গ্রাহক তালিকা লোড হচ্ছে...</td></tr></tbody></table></div></section><section id="view-reminders" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">স্বয়ংক্রিয় সার্ভিস রিমাইন্ডার ইঞ্জিন</h3><p class="text-xs text-slate-500">গ্রাহকের সার্ভিসিংয়ের পর নির্দিষ্ট দিন পর স্বয়ংক্রিয় হোয়াটসঅ্যাপ বার্তা পাঠাবে</p></div><button onclick="triggerRemindersNow()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl transition shadow"> ⚡ রিমাইন্ডার রান করুন </button></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-800">রিমাইন্ডার সেটিংস</h4><div><label class="block text-xs font-medium text-slate-600 mb-1">রিমাইন্ডারের নাম</label><input type="text" id="remSettingName" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg"></div><div><label class="block text-xs font-medium text-slate-600 mb-1">কত দিন পর পর (Interval Days)</label><input type="number" id="remSettingDays" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" value="90"></div><div><label class="block text-xs font-medium text-slate-600 mb-1">মেসেজ টেমপ্লেট</label><textarea id="remSettingTemplate" rows="6" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg font-mono"></textarea><p class="text-[10px] text-slate-400 mt-1">ব্যবহারযোগ্য ভেরিয়েবল: {{customer_name}}, {{days_since}}</p></div><button onclick="saveReminderSetting()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"> সংরক্ষণ করুন </button></div><div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-800">রিমাইন্ডার হিস্ট্রি ও লগস</h4><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold"><tr><th class="p-2.5">লগ আইডি</th><th class="p-2.5">গ্রাহক</th><th class="p-2.5">নির্ধারিত তারিখ</th><th class="p-2.5">প্রেরণের সময়</th><th class="p-2.5">স্ট্যাটাস</th></tr></thead><tbody id="reminderLogsBody" class="divide-y divide-slate-100"><tr><td colspan="5" class="p-4 text-center text-slate-400">লগ লোড হচ্ছে...</td></tr></tbody></table></div></div></div></section><section id="view-botconfig" class="hidden space-y-6"><div class="flex justify-between items-center"><div><h3 class="text-lg font-bold text-slate-900">হোয়াটসঅ্যাপ এআই বট কনফিগারেশন</h3><p class="text-xs text-slate-500">বটের সিস্টেম প্রম্পট ও রেসপন্স বার্তা কোড পরিবর্তন ছাড়াই ড্যাশবোর্ড থেকে এডিট করুন</p></div><button onclick="saveAllBotConfigs()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition shadow"> 💾 সব সেভ করুন </button></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5"><div><label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"> প্রধান এআই সিস্টেম প্রম্পট (System Prompt) </label><textarea id="cfg_system_prompt" rows="8" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500"></textarea></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-xs font-bold text-slate-700 mb-1">প্রথম সম্ভাষণ বার্তা (Initial Greeting)</label><textarea id="cfg_initial_greeting" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">ঠিকানা চাওয়ার বার্তা (Address Question)</label><textarea id="cfg_address_question" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">সমস্যা জানার বার্তা (Issue Question)</label><textarea id="cfg_issue_question" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">রিকোয়েস্ট নিশ্চিতকরণ বার্তা (Confirmation Message)</label><textarea id="cfg_confirmation_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">হ্যান্ডওভার বার্তা (Handover Message)</label><textarea id="cfg_handover_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div><div><label class="block text-xs font-bold text-slate-700 mb-1">সাধারণ রিমাইন্ডার বার্তা (Reminder Message)</label><textarea id="cfg_reminder_message" rows="3" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-lg"></textarea></div></div></div></section><section id="view-settings" class="space-y-6"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4"><div><h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><span>⚙️</span><span>সেটিংস ও এপিআই কনফিগারেশন হাব</span></h3><p class="text-xs text-slate-500 mt-1"> কোড পরিবর্তন ছাড়াই এখান থেকে Evolution API, AI প্রোভাইডার, ওয়েবহুক এবং বিজনেস সেটিংস পরিচালনা করুন। </p></div><button onclick="saveAllSettings()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center justify-center gap-2"><span>💾</span><span>সব সেটিংস সংরক্ষণ করুন</span></button></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><div class="flex items-center justify-between border-b border-slate-100 pb-3"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-emerald-600 text-lg">📱</span><span>Evolution WhatsApp API সেটিংস</span></h4><button onclick="testEvolutionConnection()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold rounded-lg transition border border-emerald-200"> 🔌 কানেকশন টেস্ট </button></div><div class="space-y-3 text-xs"><div><label class="block font-semibold text-slate-700 mb-1">Evolution API Server URL</label><input type="url" id="setting_EVOLUTION_API_URL" placeholder="যেমন: https://evolution.yourdomain.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"><span class="text-[10px] text-slate-400">যে ইউআরএল-এ আপনার Evolution API ইনস্ট্যান্স চলছে</span></div><div><label class="block font-semibold text-slate-700 mb-1">Evolution API Key</label><input type="password" id="setting_EVOLUTION_API_KEY" placeholder="আপনার Evolution Global বা Instance API Key" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">Instance Name</label><input type="text" id="setting_EVOLUTION_INSTANCE" placeholder="যেমন: ac-care বা my-bot" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div><div><label class="block font-semibold text-slate-700 mb-1">Webhook Secret (ঐচ্ছিক)</label><input type="password" id="setting_WEBHOOK_SECRET" placeholder="সিকিউর ওয়েবহুক টোকেন" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><div class="flex items-center justify-between border-b border-slate-100 pb-3"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-purple-600 text-lg">🤖</span><span>AI ইঞ্জিন ও প্রোভাইডার সেটিংস</span></h4><button onclick="testAiConnection()" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-semibold rounded-lg transition border border-purple-200"> ⚡ এআই টেস্ট </button></div><div class="space-y-3 text-xs"><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">AI Provider</label><select id="setting_AI_PROVIDER" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"><option value="anthropic">Anthropic Claude</option><option value="openai">OpenAI (ChatGPT)</option><option value="fallback">বিল্ট-ইন বাংলা ইন্টেলিজেন্ট ইঞ্জিন</option></select></div><div><label class="block font-semibold text-slate-700 mb-1">AI Model Name</label><input type="text" id="setting_AI_MODEL" placeholder="claude-3-5-sonnet-20241022 বা gpt-4o-mini" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"></div></div><div><label class="block font-semibold text-slate-700 mb-1">AI API Key</label><input type="password" id="setting_AI_API_KEY" placeholder="sk-ant-... অথবা sk-..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-xs"><span class="text-[10px] text-slate-400">এপিআই কি ডাটাবেসে সুরক্ষিতভাবে সংরক্ষিত থাকে</span></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-semibold text-slate-700 mb-1">টাইমজোন (Timezone)</label><input type="text" id="setting_BUSINESS_TIMEZONE" value="Asia/Riyadh" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none font-mono text-xs"></div><div><label class="block font-semibold text-slate-700 mb-1">মুদ্রা (Currency)</label><input type="text" id="setting_CURRENCY" value="SAR (রিয়াল)" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none text-xs"></div></div></div></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-blue-600 text-lg">🔗</span><span>লাইভ হোয়াটসঅ্যাপ ওয়েবহুক নির্দেশিকা</span></h4><div class="text-xs space-y-3 text-slate-600"><p>আপনার Evolution API ড্যাশবোর্ডে গিয়ে নিচের Webhook URL টি বসিয়ে দিন:</p><div class="flex items-center gap-2"><input type="text" id="liveWebhookUrl" readonly value="https://ac-smart-service.virallink.workers.dev/webhook/messages" class="flex-1 p-2.5 bg-slate-100 rounded-xl font-mono text-blue-700 border border-slate-200 select-all text-xs"><button onclick="copyWebhookUrl()" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium transition shrink-0"> 📋 কপি </button></div><div class="p-3 bg-blue-50 text-blue-900 rounded-xl space-y-1 text-[11px] border border-blue-100"><p><strong>প্রয়োজনীয় সেটিংস:</strong></p><ul class="list-disc list-inside space-y-0.5"><li>Webhook Events: <code class="bg-white px-1 py-0.5 rounded font-mono">MESSAGES_UPSERT</code></li><li>Method: <code class="bg-white px-1 py-0.5 rounded font-mono">POST</code></li><li>Deduplication & Idempotency: <strong>স্বয়ংক্রিয়ভাবে সক্রিয়</strong></li></ul></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4"><h4 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span class="text-amber-500 text-lg">🧪</span><span>ড্যাশবোর্ড মেসেজ সিমুলেটর (টেস্ট করুন)</span></h4><p class="text-xs text-slate-500"> Evolution API ছাড়াও সরাসরি ড্যাশবোর্ড থেকে একটি কৃত্রিম গ্রাহক বার্তা পাঠিয়ে বট রেসপন্স ও অটো-রিকোয়েস্ট তৈরি যাচাই করুন: </p><div class="space-y-3 text-xs"><div class="grid grid-cols-2 gap-2"><input type="text" id="simPhone" placeholder="ফোন নম্বর (যেমন 966500000000)" value="966501234567" class="p-2 border border-slate-300 rounded-lg font-mono"><input type="text" id="simName" placeholder="গ্রাহকের নাম" value="আহমেদ সাবি" class="p-2 border border-slate-300 rounded-lg"></div><textarea id="simMessage" rows="2" placeholder="গ্রাহকের মেসেজ (যেমন: আমার এসিতে গ্যাস লিক করছে, صবيا বাজার রোড)" class="w-full p-2 border border-slate-300 rounded-lg">আমার ২টা এসি ঠান্ডা করছে না, ঠিকানা: صবিয়া রোড নম্বর ৪</textarea><button onclick="runWebhookSimulation()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition shadow"> 🚀 মেসেজ সিমুলেট করুন ও এআই রেসপন্স দেখুন </button><div id="simResultBox" class="hidden p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 font-mono text-[11px]"></div></div></div></div><div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3"><h4 class="font-bold text-sm text-slate-900">📜 সিস্টেম অডিট ট্রেইল ও অ্যাডমিন অ্যাকশন হিস্ট্রি</h4><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold"><tr><th class="p-2.5">আইডি</th><th class="p-2.5">অ্যাকশন</th><th class="p-2.5">টেবিল</th><th class="p-2.5">রেকর্ড আইডি</th><th class="p-2.5">পরিবর্তন (Changes)</th><th class="p-2.5">সময়</th></tr></thead><tbody id="auditTableBody" class="divide-y divide-slate-100"><tr><td colspan="6" class="p-4 text-center text-slate-400">অডিট লগ লোড হচ্ছে...</td></tr></tbody></table></div></div></section></main><div id="requestModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"><div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center border-b border-slate-200 pb-3"><h3 id="reqModalTitle" class="font-bold text-base text-slate-900">সার্ভিস রিকোয়েস্ট পরিচালনা</h3><button onclick="closeRequestModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button></div><form id="reqModalForm" onsubmit="submitRequestUpdate(event)" class="space-y-3 text-xs"><input type="hidden" id="reqModalId"><div><label class="block font-medium text-slate-700 mb-1">গ্রাহকের নাম ও ফোন</label><input type="text" id="reqModalCustomer" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg" readonly></div><div><label class="block font-medium text-slate-700 mb-1">সমস্যার বর্ণনা</label><textarea id="reqModalIssue" rows="2" class="w-full p-2 border border-slate-300 rounded-lg"></textarea></div><div><label class="block font-medium text-slate-700 mb-1">সার্ভিস ঠিকানা</label><input type="text" id="reqModalAddress" class="w-full p-2 border border-slate-300 rounded-lg"></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">স্ট্যাটাস</label><select id="reqModalStatus" class="w-full p-2 border border-slate-300 rounded-lg font-medium"><option value="pending">পেন্ডিং (Pending)</option><option value="scheduled">শিডিউলড (Scheduled)</option><option value="in_progress">চলমান (In Progress)</option><option value="completed">সম্পন্ন (Completed)</option><option value="cancelled">বাতিল (Cancelled)</option></select></div><div><label class="block font-medium text-slate-700 mb-1">নির্ধারিত টেকনিশিয়ান</label><input type="text" id="reqModalTechnician" placeholder="টেকনিশিয়ানের নাম..." class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">শিডিউল তারিখ</label><input type="date" id="reqModalDate" class="w-full p-2 border border-slate-300 rounded-lg"></div><div><label class="block font-medium text-slate-700 mb-1">শিডিউল সময়</label><input type="text" id="reqModalTime" placeholder="যেমন: সকাল ১০টা" class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-medium text-slate-700 mb-1">আনুমানিক খরচ (SAR)</label><input type="number" id="reqModalCostEst" class="w-full p-2 border border-slate-300 rounded-lg"></div><div><label class="block font-medium text-slate-700 mb-1">চূড়ান্ত খরচ (SAR)</label><input type="number" id="reqModalCostFinal" class="w-full p-2 border border-slate-300 rounded-lg"></div></div><div class="flex justify-end space-x-2 pt-3 border-t border-slate-200"><button type="button" onclick="closeRequestModal()" class="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 font-medium">বন্ধ করুন</button><button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow">আপডেট করুন</button></div></form></div></div><div id="loginModal" class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4"><div class="bg-white rounded-3xl max-w-md w-full p-8 space-y-6 shadow-2xl border border-slate-100"><div class="text-center"><div class="w-16 h-16 rounded-2xl bg-blue-600 text-white text-3xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 mb-3"> ❄️ </div><h2 class="text-2xl font-bold text-slate-900">অ্যাডমিন লগইন</h2><p class="text-xs text-slate-500 mt-1">AC Smart Service Management Dashboard</p></div><form onsubmit="appLogin(event)" class="space-y-4 text-xs"><div id="loginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl"></div><div><label class="block font-semibold text-slate-700 mb-1">ইমেইল</label><input type="email" id="loginEmail" placeholder="admin@example.com" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500"></div><div><label class="block font-semibold text-slate-700 mb-1">পাসওয়ার্ড</label><input type="password" id="loginPassword" placeholder="••••••••" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500"></div><button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition"> লগইন করুন </button></form></div></div></div><script>
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
       return String(str)
@@ -27,87 +27,75 @@
 
     let currentTab = 'overview';
     let activeCustomerId = null;
-    let allCustomers = [];
-    let pollingInterval = null;
     let currentUser = null;
+    let isSubmitting = false;
 
     async function apiRequest(endpoint, method = 'GET', body = null) {
-      const opts = {
+      const options = {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       };
-      if (body) opts.body = JSON.stringify(body);
-      const res = await fetch(endpoint, opts);
-      if (res.status === 401) {
-        showLogin();
-        throw new Error('Unauthorized');
+      if (body) {
+        options.body = JSON.stringify(body);
       }
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error?.message || 'Request failed');
-      return data.data;
-    }
-
-    function switchTab(tabId) {
-      currentTab = tabId;
-      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('text-blue-600', 'bg-blue-50');
-        btn.classList.add('text-slate-600');
-      });
-      const targetSec = document.getElementById('view-' + tabId);
-      const targetBtn = document.getElementById('tab-' + tabId);
-      if (targetSec) targetSec.classList.remove('hidden');
-      if (targetBtn) {
-        targetBtn.classList.remove('text-slate-600');
-        targetBtn.classList.add('text-blue-600', 'bg-blue-50');
+      try {
+        const res = await fetch(endpoint, options);
+        if (res.status === 401 && !endpoint.includes('/api/auth/login')) {
+          showLoginModal();
+          throw new Error('অননুমোদিত এক্সেস। পুনরায় লগইন করুন।');
+        }
+        const data = await res.json();
+        if (!res.ok || (data && data.success === false)) {
+          const errMsg = data?.error?.message || data?.error || ('HTTP Error ' + res.status);
+          throw new Error(errMsg);
+        }
+        return data.data !== undefined ? data.data : data;
+      } catch (err) {
+        console.error('API Error:', endpoint, err);
+        throw err;
       }
-
-      if (tabId === 'overview') loadOverview();
-      if (tabId === 'conversations') loadConversations();
-      if (tabId === 'requests') loadServiceRequests();
-      if (tabId === 'customers') loadCustomers();
-      if (tabId === 'reminders') loadReminders();
-      if (tabId === 'botconfig') loadBotConfigs();
-      if (tabId === 'settings') loadSettings();
-      if (tabId === 'audit') loadAuditLogs();
     }
 
     async function checkAuth() {
       try {
-        const resp = await apiRequest('/api/auth/me');
-        currentUser = resp.user;
-        hideLogin();
-        loadOverview();
-        startPolling();
-      } catch (err) {
-        showLogin();
+        const res = await apiRequest('/api/auth/me');
+        if (res && res.user) {
+          currentUser = res.user;
+          hideLoginModal();
+          loadInitialData();
+        } else {
+          showLoginModal();
+        }
+      } catch (e) {
+        showLoginModal();
       }
     }
 
-    function showLogin() {
+    function showLoginModal() {
       document.getElementById('loginModal').classList.remove('hidden');
-      if (pollingInterval) clearInterval(pollingInterval);
     }
 
-    function hideLogin() {
+    function hideLoginModal() {
       document.getElementById('loginModal').classList.add('hidden');
     }
 
-    async function appLogin(event) {
-      event.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value.trim();
+    async function appLogin(e) {
+      e.preventDefault();
       const errBox = document.getElementById('loginError');
       errBox.classList.add('hidden');
-
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
       try {
-        const resp = await apiRequest('/api/auth/login', 'POST', { email, password });
-        currentUser = resp.user;
-        hideLogin();
-        loadOverview();
-        startPolling();
+        const res = await apiRequest('/api/auth/login', 'POST', { email, password });
+        if (res && res.user) {
+          currentUser = res.user;
+          hideLoginModal();
+          loadInitialData();
+        }
       } catch (err) {
-        errBox.textContent = err.message || 'লগইন ব্যর্থ হয়েছে';
+        errBox.textContent = 'লগইন ব্যর্থ: ' + err.message;
         errBox.classList.remove('hidden');
       }
     }
@@ -117,254 +105,170 @@
         await apiRequest('/api/auth/logout', 'POST');
       } catch (e) {}
       currentUser = null;
-      showLogin();
+      showLoginModal();
     }
 
-    function startPolling() {
-      if (pollingInterval) clearInterval(pollingInterval);
-      pollingInterval = setInterval(() => {
-        if (currentTab === 'overview') loadOverview();
-        if (currentTab === 'conversations' && activeCustomerId) loadChatMessages(activeCustomerId);
-        if (currentTab === 'requests') loadServiceRequests();
-      }, 10000);
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabs = ['overview', 'conversations', 'requests', 'customers', 'reminders', 'botconfig', 'settings'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        const view = document.getElementById('view-' + t);
+        if (btn && view) {
+          if (t === tab) {
+            btn.className = 'tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-blue-600 bg-blue-50 shrink-0 font-bold';
+            view.classList.remove('hidden');
+          } else {
+            btn.className = 'tab-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-slate-600 hover:text-slate-900 shrink-0';
+            view.classList.add('hidden');
+          }
+        }
+      });
+      if (tab === 'overview') loadOverview();
+      if (tab === 'conversations') loadConversationsTab();
+      if (tab === 'requests') loadServiceRequests();
+      if (tab === 'customers') loadCustomers();
+      if (tab === 'reminders') loadReminders();
+      if (tab === 'botconfig') loadBotConfig();
+      if (tab === 'settings') loadSettings();
+    }
+
+    async function loadInitialData() {
+      loadOverview();
+      setInterval(loadOverviewStats, 15000);
     }
 
     async function loadOverview() {
+      await Promise.all([loadOverviewStats(), loadRecentRequests(), loadOverviewReminders()]);
+    }
+
+    async function loadOverviewStats() {
       try {
         const stats = await apiRequest('/api/dashboard/stats');
-        document.getElementById('statTotalCustomers').textContent = stats.total_customers;
-        document.getElementById('statActiveConversations').textContent = stats.active_conversations;
-        document.getElementById('statPendingRequests').textContent = stats.pending_requests;
-        document.getElementById('statScheduledRequests').textContent = stats.scheduled_requests;
-        document.getElementById('statCompletedToday').textContent = stats.completed_today;
-        document.getElementById('statRemindersDue').textContent = stats.reminders_due;
-
-        const badgeChats = document.getElementById('badgeActiveChats');
-        if (stats.active_conversations > 0) {
-          badgeChats.textContent = stats.active_conversations;
-          badgeChats.classList.remove('hidden');
-        } else {
-          badgeChats.classList.add('hidden');
-        }
-
-        const badgeReqs = document.getElementById('badgePendingReqs');
+        document.getElementById('statTotalCustomers').textContent = stats.total_customers || 0;
+        document.getElementById('statActiveConversations').textContent = stats.active_conversations || 0;
+        document.getElementById('statPendingRequests').textContent = stats.pending_requests || 0;
+        document.getElementById('statScheduledRequests').textContent = stats.scheduled_requests || 0;
+        document.getElementById('statCompletedToday').textContent = stats.completed_today || 0;
+        document.getElementById('statRemindersDue').textContent = stats.reminders_due || 0;
+        
+        const badgeReq = document.getElementById('badgePendingReqs');
         if (stats.pending_requests > 0) {
-          badgeReqs.textContent = stats.pending_requests;
-          badgeReqs.classList.remove('hidden');
+          badgeReq.textContent = stats.pending_requests;
+          badgeReq.classList.remove('hidden');
         } else {
-          badgeReqs.classList.add('hidden');
+          badgeReq.classList.add('hidden');
         }
 
-        loadRecentRequests();
-        loadRemindersOverview();
-      } catch (err) {
-        console.error('Stats error:', err);
+        const badgeChat = document.getElementById('badgeActiveChats');
+        if (stats.active_conversations > 0) {
+          badgeChat.textContent = stats.active_conversations;
+          badgeChat.classList.remove('hidden');
+        } else {
+          badgeChat.classList.add('hidden');
+        }
+      } catch (e) {
+        console.error('Stats error:', e);
       }
     }
 
     async function loadRecentRequests() {
+      const box = document.getElementById('overviewRecentRequests');
       try {
         const reqs = await apiRequest('/api/service-requests');
-        const recBox = document.getElementById('overviewRecentRequests');
         if (!reqs.length) {
-          recBox.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">কোনো সক্রিয় সার্ভিস রিকোয়েস্ট নেই</p>';
+          box.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">কোনো সাম্প্রতিক রিকোয়েস্ট পাওয়া যায়নি</p>';
           return;
         }
-        recBox.innerHTML = reqs.slice(0, 4).map(r => {
-          return '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center">' +
-            '<div>' +
-              '<h5 class="font-bold text-xs text-slate-900">' + escapeHtml(r.customer_name) + ' • ' + escapeHtml(r.address) + '</h5>' +
-              '<p class="text-[11px] text-slate-500 mt-0.5">' + escapeHtml(r.issue_description) + '</p>' +
-            '</div>' +
-            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full uppercase ' + (r.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800') + '">' + escapeHtml(r.status) + '</span>' +
-          '</div>';
-        }).join('');
+        box.innerHTML = reqs.slice(0, 5).map(r => `
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/80 transition">
+            <div class="min-w-0 pr-3">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-xs text-slate-900">${escapeHtml(r.customer_name || 'নামহীন')}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(r.customer_phone || '')}</span>
+              </div>
+              <p class="text-xs text-slate-600 truncate mt-0.5">${escapeHtml(r.issue_description || 'সমস্যা উল্লেখ নেই')}</p>
+            </div>
+            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full shrink-0 ${getStatusBadgeClass(r.status)}">
+              ${escapeHtml(r.status)}
+            </span>
+          </div>
+        `).join('');
       } catch (e) {
-        console.error('Recent requests error:', e);
+        box.innerHTML = '<p class="text-xs text-rose-500 py-2">লোড ব্যর্থ হয়েছে</p>';
       }
     }
 
-    async function loadRemindersOverview() {
+    async function loadOverviewReminders() {
+      const box = document.getElementById('overviewRemindersList');
       try {
-        const logs = await apiRequest('/api/reminders/logs');
-        const box = document.getElementById('overviewRemindersList');
-        if (!logs.length) {
-          box.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">সাম্প্রতিক কোনো রিমাইন্ডার লগ নেই</p>';
+        const customers = await apiRequest('/api/customers');
+        const due = customers.filter(c => c.next_reminder_date && new Date(c.next_reminder_date) <= new Date());
+        if (!due.length) {
+          box.innerHTML = '<p class="text-xs text-emerald-600 py-4 text-center font-medium">আজ কোনো বকেয়া রিমাইন্ডার নেই 🎉</p>';
           return;
         }
-        box.innerHTML = logs.slice(0, 4).map(l => {
-          return '<div class="p-2.5 bg-purple-50/50 border border-purple-100 rounded-xl flex justify-between items-center text-xs">' +
-            '<div>' +
-              '<span class="font-bold text-slate-800">' + escapeHtml(l.customer_name) + '</span>' +
-              '<p class="text-[10px] text-slate-400">' + escapeHtml(l.scheduled_date) + '</p>' +
-            '</div>' +
-            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full ' + (l.status === 'sent' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700') + '">' + escapeHtml(l.status) + '</span>' +
-          '</div>';
-        }).join('');
-      } catch (e) {}
-    }
-
-    async function loadConversations() {
-      try {
-        allCustomers = await apiRequest('/api/customers');
-        renderCustomerList(allCustomers);
+        box.innerHTML = due.slice(0, 5).map(c => `
+          <div class="flex items-center justify-between p-3 bg-purple-50/50 rounded-xl border border-purple-100">
+            <div>
+              <p class="font-bold text-xs text-purple-900">${escapeHtml(c.name || 'সম্মানিত গ্রাহক')}</p>
+              <p class="text-[11px] text-purple-700 font-mono">${escapeHtml(c.phone)} • তারিখ: ${escapeHtml(c.next_reminder_date)}</p>
+            </div>
+            <button onclick="sendDirectReminder(${c.id})" class="px-3 py-1 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 transition">
+              বার্তা দিন
+            </button>
+          </div>
+        `).join('');
       } catch (e) {
-        console.error('Customers list error:', e);
+        box.innerHTML = '<p class="text-xs text-rose-500 py-2">রিমাইন্ডার লোড ব্যর্থ</p>';
       }
     }
 
-    function renderCustomerList(customers) {
-      const container = document.getElementById('conversationCustomerList');
-      if (!customers.length) {
-        container.innerHTML = '<p class="text-xs text-slate-400 p-4 text-center">কোনো কথোপকথন পাওয়া যায়নি</p>';
-        return;
-      }
-      container.innerHTML = customers.map(c => {
-        return '<div onclick="selectChat(' + c.id + ')" id="chat-cust-' + c.id + '" class="p-3 hover:bg-white cursor-pointer transition flex items-center space-x-3">' +
-          '<div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">' + escapeHtml(c.name.slice(0, 2).toUpperCase()) + '</div>' +
-          '<div class="min-w-0 flex-1">' +
-            '<div class="flex justify-between items-center">' +
-              '<h5 class="font-bold text-xs text-slate-800 truncate">' + escapeHtml(c.name) + '</h5>' +
-              '<span class="text-[10px] text-slate-400">' + (c.last_service_date || '') + '</span>' +
-            '</div>' +
-            '<p class="text-[11px] text-slate-500 font-mono truncate">' + escapeHtml(c.phone) + '</p>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function filterChatCustomers() {
-      const q = document.getElementById('chatSearchInput').value.toLowerCase();
-      const filtered = allCustomers.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
-      renderCustomerList(filtered);
-    }
-
-    async function selectChat(customerId) {
-      activeCustomerId = customerId;
-      document.querySelectorAll('#conversationCustomerList > div').forEach(d => d.classList.remove('bg-white', 'border-l-4', 'border-blue-600'));
-      const activeEl = document.getElementById('chat-cust-' + customerId);
-      if (activeEl) activeEl.classList.add('bg-white', 'border-l-4', 'border-blue-600');
-
-      const cust = allCustomers.find(c => c.id === customerId);
-      if (cust) {
-        document.getElementById('activeChatName').textContent = cust.name;
-        document.getElementById('activeChatPhone').textContent = cust.phone;
-        document.getElementById('activeChatAvatar').textContent = cust.name.slice(0, 2).toUpperCase();
-        document.getElementById('activeChatControls').classList.remove('hidden');
-
-        const botStatus = document.getElementById('activeChatBotStatus');
-        const takeoverBtn = document.getElementById('btnTakeover');
-        if (cust.human_takeover === 1) {
-          botStatus.textContent = 'হ্যান্ডওভার সক্রিয় (Agent)';
-          botStatus.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800';
-          takeoverBtn.textContent = 'এআই চালু করুন';
-          takeoverBtn.className = 'px-3 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition';
-        } else {
-          botStatus.textContent = 'AI সক্রিয়';
-          botStatus.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800';
-          takeoverBtn.textContent = 'হ্যান্ডওভার নিন';
-          takeoverBtn.className = 'px-3 py-1 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition';
-        }
-
-        document.getElementById('chatProfileDetails').innerHTML =
-          '<div><span class="text-slate-400 block">নাম:</span><strong class="text-slate-800">' + escapeHtml(cust.name) + '</strong></div>' +
-          '<div><span class="text-slate-400 block">ফোন নম্বর:</span><strong class="text-slate-800 font-mono">' + escapeHtml(cust.phone) + '</strong></div>' +
-          '<div><span class="text-slate-400 block">ঠিকানা:</span><span class="text-slate-700">' + escapeHtml(cust.address || 'নথিভুক্ত নেই') + '</span></div>' +
-          '<div><span class="text-slate-400 block">নোট:</span><span class="text-slate-600">' + escapeHtml(cust.notes || '-') + '</span></div>' +
-          '<div><span class="text-slate-400 block">সর্বশেষ সার্ভিস:</span><span class="text-slate-700">' + (cust.last_service_date || '-') + '</span></div>' +
-          '<div><span class="text-slate-400 block">পরবর্তী রিমাইন্ডার:</span><span class="text-slate-700 font-semibold text-purple-700">' + (cust.next_reminder_date || '-') + '</span></div>';
-
-        document.getElementById('adminReplyText').disabled = false;
-        document.getElementById('btnSendReply').disabled = false;
-
-        loadChatMessages(customerId);
-      }
-    }
-
-    async function loadChatMessages(customerId) {
-      try {
-        const msgs = await apiRequest('/api/customers/' + customerId + '/messages');
-        const container = document.getElementById('chatMessagesContainer');
-        if (!msgs.length) {
-          container.innerHTML = '<p class="text-xs text-slate-400 p-4 text-center">কোনো বার্তা নেই</p>';
-          return;
-        }
-        container.innerHTML = msgs.map(m => {
-          const isCustomer = m.sender === 'customer';
-          return '<div class="flex ' + (isCustomer ? 'justify-start' : 'justify-end') + '">' +
-            '<div class="max-w-[80%] rounded-2xl px-4 py-2 text-xs shadow-sm ' + (isCustomer ? 'bg-white text-slate-800 rounded-tl-none border border-slate-200' : 'bg-blue-600 text-white rounded-tr-none') + '">' +
-              '<p class="whitespace-pre-wrap leading-relaxed">' + escapeHtml(m.text) + '</p>' +
-              '<div class="flex items-center justify-end space-x-1 mt-1 text-[9px] ' + (isCustomer ? 'text-slate-400' : 'text-blue-200') + '">' +
-                '<span>' + m.timestamp + '</span>' +
-                (m.sender === 'bot' ? '<span>• AI</span>' : '') +
-              '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-        container.scrollTop = container.scrollHeight;
-      } catch (e) {
-        console.error('Messages error:', e);
-      }
-    }
-
-    async function sendAdminReply() {
-      const input = document.getElementById('adminReplyText');
-      const text = input.value.trim();
-      if (!text || !activeCustomerId) return;
-      try {
-        input.value = '';
-        await apiRequest('/api/customers/' + activeCustomerId + '/messages', 'POST', { text });
-        loadChatMessages(activeCustomerId);
-      } catch (err) {
-        alert('মেসেজ পাঠাতে ব্যর্থ: ' + err.message);
-      }
-    }
-
-    async function toggleHumanTakeover() {
-      if (!activeCustomerId) return;
-      const cust = allCustomers.find(c => c.id === activeCustomerId);
-      if (!cust) return;
-      const isTakeover = cust.human_takeover === 1;
-      const endpoint = '/api/customers/' + activeCustomerId + (isTakeover ? '/resume-ai' : '/takeover');
-      try {
-        await apiRequest(endpoint, 'POST');
-        cust.human_takeover = isTakeover ? 0 : 1;
-        selectChat(activeCustomerId);
-      } catch (err) {
-        alert('স্ট্যাটাস পরিবর্তন ব্যর্থ: ' + err.message);
+    function getStatusBadgeClass(status) {
+      switch (status) {
+        case 'pending': return 'bg-amber-100 text-amber-800 border border-amber-200';
+        case 'scheduled': return 'bg-blue-100 text-blue-800 border border-blue-200';
+        case 'in_progress': return 'bg-purple-100 text-purple-800 border border-purple-200';
+        case 'completed': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+        case 'cancelled': return 'bg-rose-100 text-rose-800 border border-rose-200';
+        default: return 'bg-slate-100 text-slate-700';
       }
     }
 
     async function loadServiceRequests() {
+      const kanbans = {
+        pending: document.getElementById('kanbanPending'),
+        scheduled: document.getElementById('kanbanScheduled'),
+        in_progress: document.getElementById('kanbanInProgress'),
+        completed: document.getElementById('kanbanCompleted'),
+        cancelled: document.getElementById('kanbanCancelled')
+      };
+      const counts = { pending: 0, scheduled: 0, in_progress: 0, completed: 0, cancelled: 0 };
+      Object.values(kanbans).forEach(k => k.innerHTML = '<p class="text-[11px] text-slate-400 p-2 text-center">লোড হচ্ছে...</p>');
+
       try {
         const reqs = await apiRequest('/api/service-requests');
-        const cols = {
-          pending: document.getElementById('kanbanPending'),
-          scheduled: document.getElementById('kanbanScheduled'),
-          in_progress: document.getElementById('kanbanInProgress'),
-          completed: document.getElementById('kanbanCompleted'),
-          cancelled: document.getElementById('kanbanCancelled')
-        };
-        const counts = { pending: 0, scheduled: 0, in_progress: 0, completed: 0, cancelled: 0 };
-        Object.values(cols).forEach(c => c.innerHTML = '');
+        Object.values(kanbans).forEach(k => k.innerHTML = '');
 
         reqs.forEach(r => {
           const st = r.status || 'pending';
           if (counts[st] !== undefined) counts[st]++;
-          const card = document.createElement('div');
-          card.className = 'bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow transition cursor-pointer text-xs space-y-1.5';
-          card.onclick = () => openRequestDetails(r.id);
-          card.innerHTML =
-            '<div class="flex justify-between items-start">' +
-              '<strong class="text-slate-900 font-bold">' + escapeHtml(r.customer_name) + '</strong>' +
-              '<span class="text-[10px] text-slate-400 font-mono">#' + r.id + '</span>' +
-            '</div>' +
-            '<p class="text-slate-600 line-clamp-2 leading-relaxed">' + escapeHtml(r.issue_description) + '</p>' +
-            '<div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">' +
-              '<span class="truncate max-w-[120px]">📍 ' + escapeHtml(r.address || 'ঠিকানা নেই') + '</span>' +
-              (r.scheduled_date ? '<span class="text-blue-600 font-semibold">' + r.scheduled_date + '</span>' : '') +
-            '</div>';
-          if (cols[st]) cols[st].appendChild(card);
+          const el = document.createElement('div');
+          el.className = 'bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition space-y-2 cursor-pointer';
+          el.onclick = () => openRequestModal(r);
+          el.innerHTML = `
+            <div class="flex justify-between items-start">
+              <span class="font-bold text-xs text-slate-900">${escapeHtml(r.customer_name || 'নামহীন')}</span>
+              <span class="text-[10px] font-mono text-slate-400">#${r.id}</span>
+            </div>
+            <p class="text-xs text-slate-600 line-clamp-2">${escapeHtml(r.issue_description || 'সমস্যা উল্লেখ নেই')}</p>
+            <div class="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-100">
+              <p>📍 ${escapeHtml(r.address || 'ঠিকানা দেওয়া হয়নি')}</p>
+              ${r.scheduled_date ? `<p class="font-medium text-blue-600">📅 ${escapeHtml(r.scheduled_date)} ${escapeHtml(r.scheduled_time || '')}</p>` : ''}
+              ${r.technician_assigned ? `<p class="text-slate-700">🔧 ${escapeHtml(r.technician_assigned)}</p>` : ''}
+            </div>
+          `;
+          if (kanbans[st]) kanbans[st].appendChild(el);
         });
 
         document.getElementById('colCountPending').textContent = counts.pending;
@@ -372,28 +276,29 @@
         document.getElementById('colCountInProgress').textContent = counts.in_progress;
         document.getElementById('colCountCompleted').textContent = counts.completed;
         document.getElementById('colCountCancelled').textContent = counts.cancelled;
+
+        Object.keys(kanbans).forEach(st => {
+          if (counts[st] === 0) {
+            kanbans[st].innerHTML = '<p class="text-[11px] text-slate-400 p-4 text-center">রিকোয়েস্ট নেই</p>';
+          }
+        });
       } catch (e) {
-        console.error('Requests error:', e);
+        console.error('Kanban load error:', e);
       }
     }
 
-    async function openRequestDetails(id) {
-      try {
-        const req = await apiRequest('/api/service-requests/' + id);
-        document.getElementById('reqModalId').value = req.id;
-        document.getElementById('reqModalCustomer').value = req.customer_name + ' (' + req.customer_phone + ')';
-        document.getElementById('reqModalIssue').value = req.issue_description || '';
-        document.getElementById('reqModalAddress').value = req.address || '';
-        document.getElementById('reqModalStatus').value = req.status || 'pending';
-        document.getElementById('reqModalTechnician').value = req.technician_assigned || '';
-        document.getElementById('reqModalDate').value = req.scheduled_date || '';
-        document.getElementById('reqModalTime').value = req.scheduled_time || '';
-        document.getElementById('reqModalCostEst').value = req.cost_estimate || '';
-        document.getElementById('reqModalCostFinal').value = req.cost_final || '';
-        document.getElementById('requestModal').classList.remove('hidden');
-      } catch (err) {
-        alert('তথ্য লোড ব্যর্থ: ' + err.message);
-      }
+    function openRequestModal(r) {
+      document.getElementById('reqModalId').value = r.id;
+      document.getElementById('reqModalCustomer').value = `${r.customer_name || 'নামহীন'} (${r.customer_phone || ''})`;
+      document.getElementById('reqModalIssue').value = r.issue_description || '';
+      document.getElementById('reqModalAddress').value = r.address || '';
+      document.getElementById('reqModalStatus').value = r.status || 'pending';
+      document.getElementById('reqModalTechnician').value = r.technician_assigned || '';
+      document.getElementById('reqModalDate').value = r.scheduled_date || '';
+      document.getElementById('reqModalTime').value = r.scheduled_time || '';
+      document.getElementById('reqModalCostEst').value = r.cost_estimate || '';
+      document.getElementById('reqModalCostFinal').value = r.cost_final || '';
+      document.getElementById('requestModal').classList.remove('hidden');
     }
 
     function closeRequestModal() {
@@ -412,6 +317,8 @@
         scheduled_time: document.getElementById('reqModalTime').value.trim() || null,
         cost_estimate: parseInt(document.getElementById('reqModalCostEst').value) || null,
         cost_final: parseInt(document.getElementById('reqModalCostFinal').value) || null,
+        payment_status: 'unpaid',
+        notes: null
       };
       try {
         await apiRequest('/api/service-requests/' + id, 'PUT', payload);
@@ -427,64 +334,225 @@
       try {
         const q = document.getElementById('customerTableSearch').value.trim();
         const status = document.getElementById('customerStatusFilter').value;
-        const query = new URLSearchParams();
-        if (q) query.set('q', q);
-        if (status) query.set('status', status);
-
-        const customers = await apiRequest('/api/customers?' + query.toString());
-        const body = document.getElementById('customerTableBody');
+        const customers = await apiRequest(`/api/customers?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);
+        const tbody = document.getElementById('customerTableBody');
         if (!customers.length) {
-          body.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">কোনো গ্রাহক পাওয়া যায়নি</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">কোনো গ্রাহক পাওয়া যায়নি</td></tr>';
           return;
         }
-        body.innerHTML = customers.map(c => {
-          const mode = c.human_takeover ? '<span class="text-amber-600 font-semibold">হ্যান্ডওভার</span>' : '<span class="text-emerald-600 font-semibold">এআই সক্রিয়</span>';
-          return '<tr>' +
-            '<td class="p-3.5 font-bold">#' + c.id + '</td>' +
-            '<td class="p-3.5 font-bold text-slate-900">' + escapeHtml(c.name) + '</td>' +
-            '<td class="p-3.5 font-mono">' + escapeHtml(c.phone) + '</td>' +
-            '<td class="p-3.5 text-slate-600 max-w-xs truncate">' + escapeHtml(c.address || '-') + '</td>' +
-            '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full uppercase text-[10px] font-bold bg-slate-100">' + escapeHtml(c.status) + '</span></td>' +
-            '<td class="p-3.5">' + mode + '</td>' +
-            '<td class="p-3.5 text-slate-500">' + (c.last_service_date || '-') + '</td>' +
-            '<td class="p-3.5 text-purple-700 font-semibold">' + (c.next_reminder_date || '-') + '</td>' +
-            '<td class="p-3.5 text-right">' +
-              '<button onclick="switchTab(\'conversations\'); selectChat(' + c.id + ')" class="px-2.5 py-1 text-[11px] bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold">চ্যাট</button>' +
-            '</td>' +
-          '</tr>';
-        }).join('');
+        tbody.innerHTML = customers.map(c => `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="p-3.5 font-mono text-slate-400">#${c.id}</td>
+            <td class="p-3.5 font-semibold text-slate-900">${escapeHtml(c.name || 'নামহীন')}</td>
+            <td class="p-3.5 font-mono text-blue-600">${escapeHtml(c.phone)}</td>
+            <td class="p-3.5 text-slate-600 max-w-xs truncate">${escapeHtml(c.address || '-')}</td>
+            <td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusBadgeClass(c.status)}">${escapeHtml(c.status)}</span></td>
+            <td class="p-3.5">
+              ${c.human_takeover ? '<span class="text-amber-600 font-semibold text-[11px]">হ্যান্ডওভার</span>' : '<span class="text-emerald-600 font-semibold text-[11px]">AI সক্রিয়</span>'}
+            </td>
+            <td class="p-3.5 text-slate-500">${escapeHtml(c.last_service_date || '-')}</td>
+            <td class="p-3.5 text-slate-500">${escapeHtml(c.next_reminder_date || '-')}</td>
+            <td class="p-3.5 text-right space-x-1.5">
+              <button onclick="openChatForCustomer(${c.id})" class="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold">চ্যাট</button>
+            </td>
+          </tr>
+        `).join('');
       } catch (e) {
-        console.error('Customers load error:', e);
+        console.error('Customer load error:', e);
+      }
+    }
+
+    function openChatForCustomer(id) {
+      activeCustomerId = id;
+      switchTab('conversations');
+    }
+
+    async function loadConversationsTab() {
+      await loadChatCustomerList();
+      if (activeCustomerId) {
+        await selectCustomer(activeCustomerId);
+      }
+    }
+
+    let allChatCustomers = [];
+    async function loadChatCustomerList() {
+      const list = document.getElementById('conversationCustomerList');
+      try {
+        allChatCustomers = await apiRequest('/api/customers');
+        renderChatCustomerList(allChatCustomers);
+      } catch (e) {
+        list.innerHTML = '<p class="text-xs text-rose-500 p-4 text-center">গ্রাহক লোড ব্যর্থ</p>';
+      }
+    }
+
+    function filterChatCustomers() {
+      const q = document.getElementById('chatSearchInput').value.toLowerCase().trim();
+      const filtered = allChatCustomers.filter(c => 
+        (c.name && c.name.toLowerCase().includes(q)) || 
+        (c.phone && c.phone.includes(q))
+      );
+      renderChatCustomerList(filtered);
+    }
+
+    function renderChatCustomerList(customers) {
+      const list = document.getElementById('conversationCustomerList');
+      if (!customers.length) {
+        list.innerHTML = '<p class="text-xs text-slate-400 p-4 text-center">কোনো গ্রাহক পাওয়া যায়নি</p>';
+        return;
+      }
+      list.innerHTML = customers.map(c => `
+        <div onclick="selectCustomer(${c.id})" class="p-3.5 hover:bg-white cursor-pointer transition flex items-center space-x-3 ${activeCustomerId === c.id ? 'bg-white border-l-4 border-blue-600 shadow-sm' : ''}">
+          <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+            ${(c.name || 'গ').charAt(0)}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex justify-between items-baseline">
+              <h5 class="text-xs font-bold text-slate-900 truncate">${escapeHtml(c.name || 'সম্মানিত গ্রাহক')}</h5>
+              <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(c.phone.slice(-4))}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate mt-0.5">${escapeHtml(c.address || 'ঠিকানা নেই')}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function selectCustomer(id) {
+      activeCustomerId = id;
+      renderChatCustomerList(allChatCustomers);
+      document.getElementById('activeChatControls').classList.remove('hidden');
+      document.getElementById('adminReplyText').disabled = false;
+      document.getElementById('btnSendReply').disabled = false;
+
+      try {
+        const cust = await apiRequest('/api/customers/' + id);
+        document.getElementById('activeChatName').textContent = cust.name || 'সম্মানিত গ্রাহক';
+        document.getElementById('activeChatPhone').textContent = cust.phone;
+        document.getElementById('activeChatAvatar').textContent = (cust.name || 'গ').charAt(0);
+        
+        const btnTakeover = document.getElementById('btnTakeover');
+        const badgeStatus = document.getElementById('activeChatBotStatus');
+        if (cust.human_takeover) {
+          badgeStatus.textContent = 'হ্যান্ডওভার সক্রিয়';
+          badgeStatus.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800';
+          btnTakeover.textContent = 'AI পুনরায় চালু করুন';
+          btnTakeover.className = 'px-3 py-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition';
+        } else {
+          badgeStatus.textContent = 'AI সক্রিয়';
+          badgeStatus.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800';
+          btnTakeover.textContent = 'হ্যান্ডওভার নিন';
+          btnTakeover.className = 'px-3 py-1 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition';
+        }
+
+        renderProfilePanel(cust);
+        await loadMessages(id);
+      } catch (e) {
+        console.error('Select customer error:', e);
+      }
+    }
+
+    function renderProfilePanel(c) {
+      const panel = document.getElementById('chatProfileDetails');
+      panel.innerHTML = `
+        <div class="space-y-1">
+          <p class="text-slate-400">নাম</p>
+          <p class="font-bold text-slate-900">${escapeHtml(c.name || '-')}</p>
+        </div>
+        <div class="space-y-1">
+          <p class="text-slate-400">ফোন নম্বর</p>
+          <p class="font-mono font-medium text-slate-800">${escapeHtml(c.phone)}</p>
+        </div>
+        <div class="space-y-1">
+          <p class="text-slate-400">ঠিকানা</p>
+          <p class="font-medium text-slate-800">${escapeHtml(c.address || 'নথিভুক্ত নেই')}</p>
+        </div>
+        <div class="space-y-1">
+          <p class="text-slate-400">স্ট্যাটাস</p>
+          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${getStatusBadgeClass(c.status)}">${escapeHtml(c.status)}</span>
+        </div>
+        <div class="space-y-1">
+          <p class="text-slate-400">পরবর্তী সার্ভিস রিমাইন্ডার</p>
+          <p class="font-medium text-purple-700">${escapeHtml(c.next_reminder_date || 'নির্ধারিত নেই')}</p>
+        </div>
+      `;
+    }
+
+    async function loadMessages(custId) {
+      const container = document.getElementById('chatMessagesContainer');
+      try {
+        const msgs = await apiRequest(`/api/customers/${custId}/messages`);
+        if (!msgs.length) {
+          container.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 text-xs">কোনো বার্তা পাওয়া যায়নি</div>';
+          return;
+        }
+        container.innerHTML = msgs.map(m => {
+          const isCustomer = m.sender === 'customer';
+          return `
+            <div class="flex flex-col ${isCustomer ? 'items-start' : 'items-end'}">
+              <div class="max-w-md px-4 py-2.5 rounded-2xl text-xs shadow-sm ${isCustomer ? 'bg-white text-slate-800 border border-slate-200' : 'bg-blue-600 text-white'}">
+                <p class="whitespace-pre-wrap">${escapeHtml(m.text)}</p>
+              </div>
+              <span class="text-[9px] text-slate-400 mt-1 px-1 font-mono">${escapeHtml(m.timestamp || '')}</span>
+            </div>
+          `;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+      } catch (e) {
+        container.innerHTML = '<p class="text-xs text-rose-500 text-center p-4">বার্তা লোড ব্যর্থ হয়েছে</p>';
+      }
+    }
+
+    async function sendAdminReply() {
+      const textInput = document.getElementById('adminReplyText');
+      const text = textInput.value.trim();
+      if (!text || !activeCustomerId) return;
+      textInput.value = '';
+      try {
+        await apiRequest(`/api/customers/${activeCustomerId}/messages`, 'POST', { text });
+        await loadMessages(activeCustomerId);
+      } catch (e) {
+        alert('বার্তা পাঠানো ব্যর্থ: ' + e.message);
+      }
+    }
+
+    async function toggleHumanTakeover() {
+      if (!activeCustomerId) return;
+      const cust = await apiRequest('/api/customers/' + activeCustomerId);
+      const action = cust.human_takeover ? 'resume-ai' : 'takeover';
+      try {
+        await apiRequest(`/api/customers/${activeCustomerId}/${action}`, 'POST');
+        await selectCustomer(activeCustomerId);
+      } catch (e) {
+        alert('অ্যাকশন ব্যর্থ: ' + e.message);
       }
     }
 
     async function loadReminders() {
       try {
         const settings = await apiRequest('/api/reminders/settings');
-        if (settings.length) {
+        if (settings && settings[0]) {
           const s = settings[0];
-          document.getElementById('remSettingName').value = s.name;
-          document.getElementById('remSettingDays').value = s.interval_days;
-          document.getElementById('remSettingTemplate').value = s.message_template;
+          document.getElementById('remSettingName').value = s.name || '';
+          document.getElementById('remSettingDays').value = s.interval_days || 90;
+          document.getElementById('remSettingTemplate').value = s.message_template || '';
         }
 
         const logs = await apiRequest('/api/reminders/logs');
-        const logsBody = document.getElementById('reminderLogsBody');
+        const tbody = document.getElementById('reminderLogsBody');
         if (!logs.length) {
-          logsBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">এখনও কোনো রিমাইন্ডার লগ নেই</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">কোনো হিস্ট্রি পাওয়া যায়নি</td></tr>';
           return;
         }
-        logsBody.innerHTML = logs.map(l => {
-          return '<tr>' +
-            '<td class="p-2.5">#' + l.id + '</td>' +
-            '<td class="p-2.5 font-bold text-slate-800">' + escapeHtml(l.customer_name) + ' (' + escapeHtml(l.customer_phone) + ')</td>' +
-            '<td class="p-2.5 text-slate-600">' + l.scheduled_date + '</td>' +
-            '<td class="p-2.5 text-slate-500">' + (l.sent_at || '-') + '</td>' +
-            '<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (l.status === 'sent' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700') + '">' + escapeHtml(l.status) + '</span></td>' +
-          '</tr>';
-        }).join('');
+        tbody.innerHTML = logs.map(l => `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="p-2.5 font-mono text-slate-400">#${l.id}</td>
+            <td class="p-2.5 font-medium text-slate-900">${escapeHtml(l.customer_name || 'গ্রাহক')}</td>
+            <td class="p-2.5 font-mono text-slate-600">${escapeHtml(l.scheduled_date)}</td>
+            <td class="p-2.5 font-mono text-slate-500 text-[10px]">${escapeHtml(l.sent_at || '-')}</td>
+            <td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${l.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${escapeHtml(l.status)}</span></td>
+          </tr>
+        `).join('');
       } catch (e) {
-        console.error('Reminders error:', e);
+        console.error('Reminder error:', e);
       }
     }
 
@@ -496,30 +564,30 @@
       };
       try {
         await apiRequest('/api/reminders/settings/1', 'PUT', payload);
-        alert('রিমাইন্ডার সেটিংস সফলভাবে আপডেট হয়েছে!');
-      } catch (err) {
-        alert('আপডেট ব্যর্থ: ' + err.message);
+        alert('রিমাইন্ডার সেটিংস সংরক্ষিত হয়েছে!');
+      } catch (e) {
+        alert('সংরক্ষণ ব্যর্থ: ' + e.message);
       }
     }
 
     async function triggerRemindersNow() {
-      if (!confirm('আপনি কি এই মুহূর্তে বকেয়া রিমাইন্ডারগুলো গ্রাহকদের কাছে পাঠাতে চান?')) return;
+      if (!confirm('আপনি কি নিশ্চিত যে এখন বকেয়া সকল সার্ভিস রিমাইন্ডার প্রসেস করতে চান?')) return;
       try {
         const res = await apiRequest('/api/reminders/trigger', 'POST');
-        alert('রিমাইন্ডার প্রসেস সম্পন্ন! সফল: ' + res.successful + ', ব্যর্থ: ' + res.failed);
+        alert(`রিমাইন্ডার সফলভাবে সম্পন্ন! প্রসেস করা হয়েছে: ${res.processed || 0} টি।`);
+        loadReminders();
         loadOverview();
-        if (currentTab === 'reminders') loadReminders();
-      } catch (err) {
-        alert('রিমাইন্ডার ট্রিগার ব্যর্থ: ' + err.message);
+      } catch (e) {
+        alert('ট্রিগার ব্যর্থ: ' + e.message);
       }
     }
 
-    async function loadBotConfigs() {
+    async function loadBotConfig() {
       try {
         const configs = await apiRequest('/api/bot-config');
-        configs.forEach(cfg => {
-          const el = document.getElementById('cfg_' + cfg.key);
-          if (el) el.value = cfg.value;
+        configs.forEach(c => {
+          const el = document.getElementById('cfg_' + c.key);
+          if (el) el.value = c.value || '';
         });
       } catch (e) {
         console.error('Bot config error:', e);
@@ -535,67 +603,39 @@
             await apiRequest('/api/bot-config/' + k, 'PUT', { value: el.value.trim() });
           }
         }
-        alert('সব বট কনফিগারেশন ও প্রম্পট সংরক্ষণ করা হয়েছে!');
-      } catch (err) {
-        alert('কনফিগারেশন সেভ ব্যর্থ: ' + err.message);
+        alert('বট কনফিগারেশন সফলভাবে সংরক্ষিত হয়েছে!');
+      } catch (e) {
+        alert('সেভ ব্যর্থ: ' + e.message);
       }
     }
 
     async function loadSettings() {
       try {
         const s = await apiRequest('/api/settings');
-        if (s.EVOLUTION_API_URL) document.getElementById('setting_EVOLUTION_API_URL').value = s.EVOLUTION_API_URL;
-        if (s.EVOLUTION_INSTANCE) document.getElementById('setting_EVOLUTION_INSTANCE').value = s.EVOLUTION_INSTANCE;
-        if (s.AI_PROVIDER) document.getElementById('setting_AI_PROVIDER').value = s.AI_PROVIDER;
-        if (s.AI_MODEL) document.getElementById('setting_AI_MODEL').value = s.AI_MODEL;
-        if (s.BUSINESS_TIMEZONE) document.getElementById('setting_BUSINESS_TIMEZONE').value = s.BUSINESS_TIMEZONE;
-        if (s.CURRENCY) document.getElementById('setting_CURRENCY').value = s.CURRENCY;
-
-        if (s._is_set_EVOLUTION_API_KEY) {
-          document.getElementById('setting_EVOLUTION_API_KEY').placeholder = '•••••••• (সংরক্ষিত আছে - পরিবর্তন করতে নতুন লিখুন)';
-        }
-        if (s._is_set_WEBHOOK_SECRET) {
-          document.getElementById('setting_WEBHOOK_SECRET').placeholder = '•••••••• (সংরক্ষিত আছে - পরিবর্তন করতে নতুন লিখুন)';
-        }
-        if (s._is_set_AI_API_KEY) {
-          document.getElementById('setting_AI_API_KEY').placeholder = '•••••••• (সংরক্ষিত আছে - পরিবর্তন করতে নতুন লিখুন)';
-        }
+        const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+        keys.forEach(k => {
+          const el = document.getElementById('setting_' + k);
+          if (el && s[k] !== undefined) el.value = s[k];
+        });
+        loadAuditLogs();
       } catch (e) {
         console.error('Settings load error:', e);
       }
     }
 
     async function saveAllSettings() {
+      const keys = ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE', 'WEBHOOK_SECRET', 'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY', 'BUSINESS_TIMEZONE', 'CURRENCY'];
+      const payload = {};
+      keys.forEach(k => {
+        const el = document.getElementById('setting_' + k);
+        if (el) payload[k] = el.value.trim();
+      });
       try {
-        const payload = {};
-        const url = document.getElementById('setting_EVOLUTION_API_URL').value.trim();
-        const evoKey = document.getElementById('setting_EVOLUTION_API_KEY').value.trim();
-        const inst = document.getElementById('setting_EVOLUTION_INSTANCE').value.trim();
-        const whSec = document.getElementById('setting_WEBHOOK_SECRET').value.trim();
-        const aiProv = document.getElementById('setting_AI_PROVIDER').value;
-        const aiMod = document.getElementById('setting_AI_MODEL').value.trim();
-        const aiKey = document.getElementById('setting_AI_API_KEY').value.trim();
-        const tz = document.getElementById('setting_BUSINESS_TIMEZONE').value.trim();
-        const curr = document.getElementById('setting_CURRENCY').value.trim();
-
-        if (url) payload.EVOLUTION_API_URL = url;
-        if (evoKey && evoKey !== '••••••••') payload.EVOLUTION_API_KEY = evoKey;
-        if (inst) payload.EVOLUTION_INSTANCE = inst;
-        if (whSec && whSec !== '••••••••') payload.WEBHOOK_SECRET = whSec;
-        if (aiProv) payload.AI_PROVIDER = aiProv;
-        if (aiMod) payload.AI_MODEL = aiMod;
-        if (aiKey && aiKey !== '••••••••') payload.AI_API_KEY = aiKey;
-        if (tz) payload.BUSINESS_TIMEZONE = tz;
-        if (curr) payload.CURRENCY = curr;
-
         await apiRequest('/api/settings', 'POST', payload);
-        alert('সব সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
-        document.getElementById('setting_EVOLUTION_API_KEY').value = '';
-        document.getElementById('setting_WEBHOOK_SECRET').value = '';
-        document.getElementById('setting_AI_API_KEY').value = '';
+        alert('সকল এপিআই ও বিজনেস সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
         loadSettings();
-      } catch (err) {
-        alert('সেটিংস সংরক্ষণ ব্যর্থ: ' + err.message);
+      } catch (e) {
+        alert('সংরক্ষণ ব্যর্থ: ' + e.message);
       }
     }
 
@@ -604,14 +644,14 @@
       const key = document.getElementById('setting_EVOLUTION_API_KEY').value.trim();
       const instance = document.getElementById('setting_EVOLUTION_INSTANCE').value.trim();
       if (!url || !instance) {
-        alert('অনুগ্রহ করে URL এবং Instance Name দিন');
+        alert('অনুগ্রহ করে Evolution API Server URL এবং Instance Name প্রদান করুন।');
         return;
       }
       try {
         const res = await apiRequest('/api/settings/test-evolution', 'POST', { url, key, instance });
-        alert('Evolution API কানেকশন সফল! ইনস্ট্যান্স সক্রিয়।');
+        alert('কানেকশন সফল! ইনস্ট্যান্স সক্রিয় আছে।');
       } catch (e) {
-        alert('Evolution API কানেকশন ব্যর্থ: ' + e.message);
+        alert('কানেকশন ব্যর্থ: ' + e.message);
       }
     }
 
@@ -621,68 +661,78 @@
       const key = document.getElementById('setting_AI_API_KEY').value.trim();
       try {
         const res = await apiRequest('/api/settings/test-ai', 'POST', { provider, model, key });
-        alert('AI টেস্ট সফল!\nউত্তর: ' + res.reply);
+        alert('AI টেস্ট সফল!\nউত্তর: ' + (res.reply || 'রেসপন্স পাওয়া গেছে'));
       } catch (e) {
         alert('AI টেস্ট ব্যর্থ: ' + e.message);
       }
     }
 
     function copyWebhookUrl() {
-      const input = document.getElementById('liveWebhookUrl') || document.getElementById('webhookUrlDisplay');
-      const val = input.value || input.innerText;
-      navigator.clipboard.writeText(val.trim()).then(() => {
-        alert('ওয়েবহুক URL ক্লিপবোর্ডে কপি করা হয়েছে!');
-      });
+      const el = document.getElementById('liveWebhookUrl');
+      el.select();
+      navigator.clipboard.writeText(el.value);
+      alert('ওয়েবহুক URL ক্লিপবোর্ডে কপি করা হয়েছে!');
     }
 
     async function runWebhookSimulation() {
       const phone = document.getElementById('simPhone').value.trim();
       const name = document.getElementById('simName').value.trim();
       const message = document.getElementById('simMessage').value.trim();
-      const box = document.getElementById('simResultBox');
-      box.classList.remove('hidden');
-      box.innerHTML = '<span class="text-slate-500">প্রসেসিং হচ্ছে...</span>';
+      const resBox = document.getElementById('simResultBox');
+      resBox.classList.remove('hidden');
+      resBox.innerHTML = '<span class="text-slate-400">সিমুলেশন চলছে...</span>';
+
+      const simulatedPayload = {
+        data: {
+          key: {
+            remoteJid: phone + '@s.whatsapp.net',
+            fromMe: false,
+            id: 'SIM-' + Date.now()
+          },
+          pushName: name,
+          message: {
+            conversation: message
+          }
+        }
+      };
 
       try {
-        const payload = {
-          data: {
-            key: { id: 'SIM_' + Date.now(), remoteJid: phone + '@s.whatsapp.net', fromMe: false },
-            pushName: name,
-            message: { conversation: message }
-          }
-        };
-        const res = await fetch('/webhook/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        box.innerHTML = '<div class="text-emerald-700 font-bold">সফলভাবে সিমুলেট হয়েছে!</div>' +
-          '<div><strong>বটের উত্তর:</strong> ' + escapeHtml(data.data?.reply || data.reply || JSON.stringify(data)) + '</div>' +
-          (data.data?.tool_executed ? '<div class="text-blue-700"><strong>অ্যাকশন:</strong> ' + escapeHtml(data.data.tool_executed) + '</div>' : '');
-        loadOverview();
+        const res = await apiRequest('/webhook/messages', 'POST', simulatedPayload);
+        resBox.innerHTML = `
+          <p class="text-emerald-600 font-bold">✓ সিমুলেশন সফল</p>
+          <p class="text-slate-700">বটের উত্তর: <strong>${escapeHtml(res.reply || 'উত্তর প্রদান করা হয়েছে')}</strong></p>
+          <p class="text-slate-500">টুল এক্সিকিউশন: <code>${escapeHtml(res.tool_executed || 'নেই')}</code></p>
+        `;
+        loadRecentRequests();
+        loadOverviewStats();
       } catch (e) {
-        box.innerHTML = '<span class="text-rose-600">এরর: ' + escapeHtml(e.message) + '</span>';
+        resBox.innerHTML = `<p class="text-rose-600 font-bold">✗ সিমুলেশন ব্যর্থ: ${escapeHtml(e.message)}</p>`;
       }
     }
 
     async function loadAuditLogs() {
       try {
         const logs = await apiRequest('/api/audit-logs');
-        const body = document.getElementById('auditTableBody');
+        const tbody = document.getElementById('auditTableBody');
         if (!logs.length) {
-          body.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">কোনো অডিট লগ নেই</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">কোনো অডিট লগ নেই</td></tr>';
           return;
         }
-        body.innerHTML = logs.map(l => {
-          return '<tr>' +
-            '<td class="p-2.5">#' + l.id + '</td>' +
-            '<td class="p-2.5 font-bold text-slate-800">' + escapeHtml(l.action) + '</td>' +
-            '<td class="p-2.5 text-slate-600">' + escapeHtml(l.table_name || '-') + '</td>' +
-            '<td class="p-2.5 text-slate-600">#' + (l.record_id || '-') + '</td>' +
-            '<td class="p-2.5 font-mono text-[10px] text-slate-500 max-w-xs truncate">' + escapeHtml(l.changes || '-') + '</td>' +
-            '<td class="p-2.5 text-slate-400">' + l.timestamp + '</td>' +
-          '</tr>';
+        tbody.innerHTML = logs.map(l => {
+          let ch = '';
+          try {
+            ch = typeof l.changes === 'string' ? l.changes : JSON.stringify(l.changes);
+          } catch (e) { ch = '-'; }
+          return `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+              <td class="p-2.5 font-mono text-slate-400">#${l.id}</td>
+              <td class="p-2.5 font-bold text-blue-700">${escapeHtml(l.action)}</td>
+              <td class="p-2.5 font-mono text-slate-600">${escapeHtml(l.table_name || '-')}</td>
+              <td class="p-2.5 font-mono text-slate-500">${escapeHtml(String(l.record_id || '-'))}</td>
+              <td class="p-2.5 font-mono text-slate-600 max-w-xs truncate">${escapeHtml(ch)}</td>
+              <td class="p-2.5 font-mono text-slate-400 text-[10px]">${escapeHtml(l.created_at)}</td>
+            </tr>
+          `;
         }).join('');
       } catch (e) {
         console.error('Audit error:', e);
