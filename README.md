@@ -16,7 +16,7 @@ An intelligent, full-stack AC Servicing & Maintenance Automation Platform powere
 
 2. **Webhooks & Idempotency:**
    - Dedicated webhook endpoint: `POST /webhook/messages`
-   - Validates payloads, rejects `fromMe` outgoing echoes, and deduplicates WhatsApp message IDs.
+   - Validates payloads, rejects `fromMe` outgoing echoes, and deduplicates WhatsApp message IDs with `webhook_logs`.
 
 3. **Human Takeover & Admin Live Chat:**
    - Instant 1-click **Takeover (হ্যান্ডওভার)** and **Resume AI (এআই চালু)** toggles from the dashboard.
@@ -36,11 +36,11 @@ An intelligent, full-stack AC Servicing & Maintenance Automation Platform powere
 
 ---
 
-## 🔑 Access Credentials
+## 🔑 Access & Authentication
 
 - **URL:** [https://ac-smart-service.virallink.workers.dev](https://ac-smart-service.virallink.workers.dev)
-- **Admin Email:** `admin@accare.com`
-- **Default Password:** `admin123456`
+- **Authentication:** Web Crypto PBKDF2 Password Hashing (100,000 iterations), Secure HttpOnly SameSite Session Cookies.
+- **Admin Management:** Credentials are securely managed in Cloudflare D1 database with strict RBAC (`admin`, `manager`, `viewer`).
 
 ---
 
@@ -48,6 +48,6 @@ An intelligent, full-stack AC Servicing & Maintenance Automation Platform powere
 
 - **Backend & Host:** Cloudflare Workers (Edge Serverless)
 - **Database:** Cloudflare D1 Relational SQLite Database (`ac-smart-service-db`)
-- **Frontend Dashboard:** Integrated Single-Page Application (Tailwind CSS, Responsive, Real-time 4s Polling)
+- **Frontend Dashboard:** Integrated Single-Page Application (Tailwind CSS, Responsive, Real-time Polling)
 - **WhatsApp Gateway:** Evolution API (`/message/sendText`)
-- **Security:** Web Crypto PBKDF2 Password Hashing, Secure Session Cookies, Full Audit Trail
+- **Security:** Constant-time Webhook verification, API key masking, Role-based Access Control, Stored XSS sanitization, Full Audit Trail.
