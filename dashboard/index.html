@@ -33,6 +33,7 @@
     async function apiRequest(endpoint, method = 'GET', body = null) {
       const options = {
         method,
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -529,8 +530,8 @@
     async function loadReminders() {
       try {
         const settings = await apiRequest('/api/reminders/settings');
-        if (settings && settings[0]) {
-          const s = settings[0];
+        if (settings && !Array.isArray(settings)) {
+          const s = settings;
           document.getElementById('remSettingName').value = s.name || '';
           document.getElementById('remSettingDays').value = s.interval_days || 90;
           document.getElementById('remSettingTemplate').value = s.message_template || '';
@@ -585,9 +586,9 @@
     async function loadBotConfig() {
       try {
         const configs = await apiRequest('/api/bot-config');
-        configs.forEach(c => {
-          const el = document.getElementById('cfg_' + c.key);
-          if (el) el.value = c.value || '';
+        Object.entries(configs || {}).forEach(([key, value]) => {
+          const el = document.getElementById('cfg_' + key);
+          if (el) el.value = value || '';
         });
       } catch (e) {
         console.error('Bot config error:', e);
